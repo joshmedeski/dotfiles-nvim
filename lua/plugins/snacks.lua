@@ -19,7 +19,7 @@ local function get_header()
   math.randomseed(os.time())
   local font = fonts[math.random(#fonts)]
 
-  local figlet = vim.fn.system { 'figlet', '-f', font, name }
+  local figlet = vim.fn.system { 'figlet', '-w', '1000', '-f', font, name }
   if vim.v.shell_error ~= 0 then
     return name
   end
