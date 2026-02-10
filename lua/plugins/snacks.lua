@@ -69,21 +69,13 @@ return {
       col = nil, -- dashboard position. nil for center
       pane_gap = 4, -- empty columns between vertical panes
       autokeys = '1234567890abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ', -- autokey sequence
-      -- These settings are used by some built-in sections
-      preset = {
-        -- Defaults to a picker that supports `fzf-lua`, `telescope.nvim` and `mini.pick`
-        ---@type fun(cmd:string, opts:table)|nil
-        pick = nil,
-        -- Used by the `keys` section to show keymaps.
-        -- Set your curstom keymaps here.
-        -- When using a function, the `items` argument are the default keymaps.
-        ---@type snacks.dashboard.Item[]
-        keys = {
-          { icon = ' ', key = 'f', desc = 'Recent Files', action = ":lua Snacks.dashboard.pick('oldfiles')" },
-          { icon = ' ', key = '/', desc = 'Find Text', action = ":lua Snacks.dashboard.pick('live_grep')" },
-          { icon = ' ', key = 'q', desc = 'Quit', action = ':qa' },
-        },
-        header = get_header(),
+      sections = {
+        { header = get_header(), width = 2000 },
+        { icon = ' ', title = 'Recent Files', section = 'recent_files', indent = 2, padding = 1 },
+        { icon = ' ', key = 'f', desc = 'Recent Files', action = ":lua Snacks.dashboard.pick('oldfiles')" },
+        { icon = ' ', key = '/', desc = 'Find Text', action = ":lua Snacks.dashboard.pick('live_grep')" },
+        { icon = ' ', key = 'q', desc = 'Quit', action = ':qa' },
+        { section = 'startup' },
       },
     },
   },
