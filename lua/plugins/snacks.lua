@@ -1,14 +1,25 @@
 ---@module 'snacks'
 
 local function get_header()
-  local name = vim.fn.system('tmux display-message -p "#S"')
+  local name = vim.fn.system 'tmux display-message -p "#S"'
   if vim.v.shell_error ~= 0 or name:match '^%s*$' then
     name = vim.fn.fnamemodify(vim.fn.getcwd(), ':t')
   else
     name = name:gsub('%s+$', '')
   end
 
-  local figlet = vim.fn.system { 'figlet', name }
+  local font_dir = vim.fn.system('figlet -I 2'):gsub('%s+$', '')
+  if vim.v.shell_error ~= 0 then
+    return name
+  end
+  local fonts = vim.fn.globpath(font_dir, '*.flf', false, true)
+  if #fonts == 0 then
+    return name
+  end
+  math.randomseed(os.time())
+  local font = fonts[math.random(#fonts)]
+
+  local figlet = vim.fn.system { 'figlet', '-f', font, name }
   if vim.v.shell_error ~= 0 then
     return name
   end
@@ -68,13 +79,8 @@ return {
         -- When using a function, the `items` argument are the default keymaps.
         ---@type snacks.dashboard.Item[]
         keys = {
-          { icon = ' ', key = 'f', desc = 'Find File', action = ":lua Snacks.dashboard.pick('files')" },
-          { icon = ' ', key = 'n', desc = 'New File', action = ':ene | startinsert' },
-          { icon = ' ', key = 'g', desc = 'Find Text', action = ":lua Snacks.dashboard.pick('live_grep')" },
-          { icon = ' ', key = 'r', desc = 'Recent Files', action = ":lua Snacks.dashboard.pick('oldfiles')" },
-          { icon = ' ', key = 'c', desc = 'Config', action = ":lua Snacks.dashboard.pick('files', {cwd = vim.fn.stdpath('config')})" },
-          { icon = ' ', key = 's', desc = 'Restore Session', section = 'session' },
-          { icon = '󰒲 ', key = 'l', desc = 'Lazy', action = ':Lazy', enabled = package.loaded.lazy ~= nil },
+          { icon = ' ', key = 'f', desc = 'Recent Files', action = ":lua Snacks.dashboard.pick('oldfiles')" },
+          { icon = ' ', key = '/', desc = 'Find Text', action = ":lua Snacks.dashboard.pick('live_grep')" },
           { icon = ' ', key = 'q', desc = 'Quit', action = ':qa' },
         },
         header = get_header(),
