@@ -18,12 +18,12 @@ return {
 
   config = function(_, opts)
     require('catppuccin').setup(opts)
-    require('dark_notify').run({
+    require('dark_notify').run {
       schemes = {
         dark = 'catppuccin-mocha',
         light = 'catppuccin-latte',
       },
-    })
+    }
   end,
 
   ---@class CatppuccinOptions
@@ -77,6 +77,13 @@ return {
           FFFGitSignStagedSelected = { fg = colors.green, bg = colors.surface0 },
           FFFGitSignUntracked = { fg = colors.pink },
           FFFGitSignUntrackedSelected = { fg = colors.pink, bg = colors.surface0 },
+
+          Rainbow1 = { fg = colors.red },
+          Rainbow2 = { fg = colors.peach },
+          Rainbow3 = { fg = colors.yellow },
+          Rainbow4 = { fg = colors.green },
+          Rainbow5 = { fg = colors.blue },
+          Rainbow6 = { fg = colors.mauve },
 
           PackageInfoOutdatedVersion = { fg = colors.yellow },
           PackageInfoUpToDateVersion = { fg = colors.green },

@@ -23,7 +23,19 @@ local function get_header()
   if vim.v.shell_error ~= 0 then
     return name
   end
-  return figlet
+
+  local rainbow = { 'Rainbow1', 'Rainbow2', 'Rainbow3', 'Rainbow4', 'Rainbow5', 'Rainbow6' }
+  local result = {}
+  local color_idx = 1
+  for char in figlet:gmatch '.' do
+    if char:match '%S' then
+      table.insert(result, { char, hl = rainbow[color_idx] })
+      color_idx = color_idx % #rainbow + 1
+    else
+      table.insert(result, { char })
+    end
+  end
+  return result
 end
 
 return {
@@ -70,7 +82,7 @@ return {
       pane_gap = 4, -- empty columns between vertical panes
       autokeys = '1234567890abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ', -- autokey sequence
       sections = {
-        { header = get_header(), width = 2000 },
+        { text = get_header(), width = 2000, align = 'center', padding = 1 },
         { icon = ' ', title = 'Recent Files', section = 'recent_files', indent = 2, padding = 1 },
         { icon = ' ', key = 'f', desc = 'Recent Files', action = ":lua Snacks.dashboard.pick('oldfiles')" },
         { icon = ' ', key = '/', desc = 'Find Text', action = ":lua Snacks.dashboard.pick('live_grep')" },
