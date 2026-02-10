@@ -1,4 +1,20 @@
 ---@module 'snacks'
+
+local function get_header()
+  local name = vim.fn.system('tmux display-message -p "#S"')
+  if vim.v.shell_error ~= 0 or name:match '^%s*$' then
+    name = vim.fn.fnamemodify(vim.fn.getcwd(), ':t')
+  else
+    name = name:gsub('%s+$', '')
+  end
+
+  local figlet = vim.fn.system { 'figlet', name }
+  if vim.v.shell_error ~= 0 then
+    return name
+  end
+  return figlet
+end
+
 return {
   'folke/snacks.nvim',
   enabled = true,
@@ -61,14 +77,7 @@ return {
           { icon = '󰒲 ', key = 'l', desc = 'Lazy', action = ':Lazy', enabled = package.loaded.lazy ~= nil },
           { icon = ' ', key = 'q', desc = 'Quit', action = ':qa' },
         },
-        header = [[
-     ██╗ ██████╗ ███████╗██╗  ██╗    ███╗   ███╗███████╗██████╗ ███████╗███████╗██╗  ██╗██╗
-     ██║██╔═══██╗██╔════╝██║  ██║    ████╗ ████║██╔════╝██╔══██╗██╔════╝██╔════╝██║ ██╔╝██║
-     ██║██║   ██║███████╗███████║    ██╔████╔██║█████╗  ██║  ██║█████╗  ███████╗█████╔╝ ██║
-██   ██║██║   ██║╚════██║██╔══██║    ██║╚██╔╝██║██╔══╝  ██║  ██║██╔══╝  ╚════██║██╔═██╗ ██║
-╚█████╔╝╚██████╔╝███████║██║  ██║    ██║ ╚═╝ ██║███████╗██████╔╝███████╗███████║██║  ██╗██║
- ╚════╝  ╚═════╝ ╚══════╝╚═╝  ╚═╝    ╚═╝     ╚═╝╚══════╝╚═════╝ ╚══════╝╚══════╝╚═╝  ╚═╝╚═╝
-]],
+        header = get_header(),
       },
     },
   },
