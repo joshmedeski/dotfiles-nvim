@@ -13,22 +13,17 @@ return {
   priority = 1000, -- Make sure to load this before all the other start plugins.
 
   dependencies = {
-    {
-      'cormacrelf/dark-notify',
-      init = function()
-        require('dark_notify').run()
-        vim.api.nvim_create_autocmd('OptionSet', {
-          pattern = 'background',
-          callback = function()
-            vim.cmd('Catppuccin ' .. (vim.v.option_new == 'light' and 'latte' or 'mocha'))
-          end,
-        })
-      end,
-    },
+    { 'cormacrelf/dark-notify' },
   },
 
-  init = function()
-    vim.cmd.colorscheme 'catppuccin'
+  config = function(_, opts)
+    require('catppuccin').setup(opts)
+    require('dark_notify').run({
+      schemes = {
+        dark = 'catppuccin-mocha',
+        light = 'catppuccin-latte',
+      },
+    })
   end,
 
   ---@class CatppuccinOptions
