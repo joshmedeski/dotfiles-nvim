@@ -7,6 +7,12 @@
  ╚═════╝ ╚═╝        ╚═╝   ╚═╝ ╚═════╝ ╚═╝  ╚═══╝╚══════╝
 --]]
 
+-- Pin Node.js to fnm default version so LSP servers always use it
+local fnm_default = vim.fn.resolve(vim.fn.expand '~/.local/share/fnm/aliases/default')
+if vim.fn.isdirectory(fnm_default .. '/bin') == 1 then
+  vim.env.PATH = fnm_default .. '/bin:' .. vim.env.PATH
+end
+
 -- Set <space> as the leader key
 -- See `:help mapleader`
 --  NOTE: Must happen before plugins are loaded (otherwise wrong leader will be used)
