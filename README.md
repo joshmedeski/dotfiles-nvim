@@ -44,20 +44,17 @@ A personalized Neovim configuration featuring a modular architecture and extensi
 - **icons.lua**: Icon configurations for UI elements
 
 #### Plugin Ecosystem (`lua/plugins/`)
-Over 50 specialized plugins organized by category:
+Over 40 specialized plugins organized by category:
 
 **AI & Code Assistance**
 - `claudecode.lua` - Claude Code integration for seamless AI development
 - `copilot.lua` / `copilot-chat.lua` - GitHub Copilot code completion and chat
-- `codecompanion.lua` - AI code companion with multiple model support
-- `gp.lua` - GPT integration for code generation and analysis
 
 **Development Tools**
 - `lspconfig.lua` - Language server configurations
 - `conform.lua` - Code formatting
 - `treesitter.lua` - Syntax highlighting and parsing
 - `blink.lua` - Completion engine
-- `telescope.lua` - Fuzzy finder
 - `trouble.lua` - Diagnostics and quickfix
 - `refactoring.lua` - Code refactoring tools
 
@@ -153,6 +150,15 @@ Plugins that were part of this config but have since been removed:
 - **[sidekick.nvim](https://github.com/folke/sidekick.nvim)** - CLI tool integration
 - **[tiny-inline-diagnostic.nvim](https://github.com/rachartier/tiny-inline-diagnostic.nvim)** - Inline LSP diagnostics display
 - **[pixel.nvim](https://github.com/bjarneo/pixel.nvim)** - Alternative colorscheme
+- **[telescope.nvim](https://github.com/nvim-telescope/telescope.nvim)** - Fuzzy finder (replaced by snacks.nvim picker)
+- **[fzf-lua](https://github.com/ibhagwan/fzf-lua)** - FZF integration (replaced by snacks.nvim picker)
+- **[fff.nvim](https://github.com/echasnovski/fff.nvim)** - File finder (replaced by snacks.nvim picker)
+- **[codecompanion.nvim](https://github.com/olimorris/codecompanion.nvim)** - AI code companion (replaced by Claude Code)
+- **[gp.nvim](https://github.com/Robitx/gp.nvim)** - Multi-provider AI chat (replaced by Claude Code)
+- **[mcphub.nvim](https://github.com/ravitemer/mcphub.nvim)** - MCP hub integration (removed with codecompanion)
+- **[aider.nvim](https://github.com/joshuavial/aider.nvim)** - Aider CLI integration (replaced by Claude Code)
+- **[neo-tree.nvim](https://github.com/nvim-neo-tree/neo-tree.nvim)** - File explorer (replaced by oil.nvim + snacks.nvim)
+- **[codediff.nvim](https://github.com/Verf/codediff.nvim)** - Code diff viewer (replaced by diffview.nvim + gitsigns)
 
 ## Installation
 

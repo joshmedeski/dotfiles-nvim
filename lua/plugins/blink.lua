@@ -8,7 +8,6 @@ return {
   dependencies = {
     'brenoprata10/nvim-highlight-colors',
     'folke/lazydev.nvim',
-    'Kaiser-Yang/blink-cmp-avante',
     'MahanRahmati/blink-nerdfont.nvim',
     'moyiz/blink-emoji.nvim',
     'rafamadriz/friendly-snippets',
@@ -78,12 +77,8 @@ return {
     },
 
     sources = {
-      default = { 'avante', 'codecompanion', 'git', 'lsp', 'path', 'snippets', 'buffer', 'emoji', 'nerdfont' },
+      default = { 'git', 'lsp', 'path', 'snippets', 'buffer', 'emoji', 'nerdfont' },
       providers = {
-        avante = {
-          module = 'blink-cmp-avante',
-          name = 'Avante',
-        },
         git = {
           module = 'blink-cmp-git',
           name = 'Git',
@@ -109,9 +104,6 @@ return {
           score_offset = 15,
           opts = { insert = true },
         },
-        opencode = {
-          module = 'opencode.cmp.blink',
-        },
         emoji = {
           -- TODO: update appearance to only show emoji and not lsp symbol
           module = 'blink-emoji',
@@ -121,7 +113,6 @@ return {
         },
       },
       per_filetype = {
-        opencode_ask = { 'opencode', 'buffer' },
         lua = { inherit_defaults = true, 'lazydev' },
       },
     },
