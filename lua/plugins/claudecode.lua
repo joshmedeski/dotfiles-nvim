@@ -10,7 +10,7 @@ local tmux_provider = (function()
   end
 
   local function create_pane(cmd_string, env_table)
-    local args = { 'tmux', 'split-window', '-h', '-l', '40%', '-P', '-F', '#{pane_id}' }
+    local args = { 'tmux', 'split-window', '-h', '-l', '50%', '-P', '-F', '#{pane_id}' }
     if env_table then
       for k, v in pairs(env_table) do
         table.insert(args, '-e')
