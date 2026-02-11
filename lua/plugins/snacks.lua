@@ -83,13 +83,14 @@ return {
       autokeys = '1234567890abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ', -- autokey sequence
       sections = {
         { text = get_header(), width = 2000, align = 'center', padding = 1 },
-        { icon = '', title = 'Unstaged Changes', section = 'terminal', cmd = 'git diff --stat', height = 5, indent = 2, padding = 1 },
+        { icon = '', title = 'Unstaged Changes', section = 'terminal', cmd = 'git diff --stat', height = 5, indent = 2, padding = 1, ttl = 0 },
         { icon = ' ', title = 'Recent Files', section = 'recent_files', cwd = true, indent = 2, padding = 1 },
         { icon = '󰊢', key = 'g', desc = 'Neogit', action = ':Neogit' },
         { icon = '', key = 'G', desc = 'Git Status', action = ':lua Snacks.picker.git_status()' },
-        { icon = '󱜙 ', key = 'a', desc = 'AI (Claude Code)', action = ':ClaudeCode' },
+        { icon = '󱜙 ', key = 'c', desc = 'Claude Code', action = ':ClaudeCode' },
         { icon = ' ', key = 'f', desc = 'Go To File', action = ':GoToFile' },
         { icon = ' ', key = '/', desc = 'Find Text', action = ':Grep' },
+        { icon = ' ', key = 'r', desc = 'Reload Dashboard', action = ':lua Snacks.dashboard.open()' },
         { icon = '󰩈', key = 'q', desc = 'Quit', action = ':qa' },
       },
     },
