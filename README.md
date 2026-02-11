@@ -47,8 +47,8 @@ A personalized Neovim configuration featuring a modular architecture and extensi
 Over 40 specialized plugins organized by category:
 
 **AI & Code Assistance**
+- `copilot.lua` / GitHub Copilot code completion
 - `claudecode.lua` - Claude Code integration for seamless AI development
-- `copilot.lua` / `copilot-chat.lua` - GitHub Copilot code completion and chat
 
 **Development Tools**
 - `lspconfig.lua` - Language server configurations
