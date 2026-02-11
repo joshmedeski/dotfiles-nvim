@@ -84,7 +84,7 @@ return {
       sections = {
         { text = get_header(), width = 2000, align = 'center', padding = 1 },
         { icon = ' ', title = 'Recent Files', section = 'recent_files', cwd = true, indent = 2, padding = 1 },
-        { icon = ' ', key = 'f', desc = 'Recent Files', action = ":lua Snacks.dashboard.pick('oldfiles', {filter = {cwd = true}})" },
+        { icon = ' ', key = 'f', desc = 'Files', action = ":lua Snacks.dashboard.pick('files', {filter = {cwd = true}})" },
         { icon = ' ', key = '/', desc = 'Find Text', action = ":lua Snacks.dashboard.pick('live_grep')" },
         { icon = ' ', key = 'q', desc = 'Quit', action = ':qa' },
         { section = 'startup' },
