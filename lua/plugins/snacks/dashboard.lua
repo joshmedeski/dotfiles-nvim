@@ -53,7 +53,7 @@ local function get_unstaged_changes()
     return
   end
   return {
-    icon = '',
+    icon = '👀',
     title = 'Unstaged Changes',
     section = 'terminal',
     cmd = 'git diff --stat',
@@ -75,13 +75,13 @@ return {
   sections = {
     get_header,
     get_unstaged_changes,
-    { icon = ' ', title = 'Recent Files', section = 'recent_files', cwd = true, indent = 2, padding = 1 },
-    { icon = '󰊢', key = 'g', desc = 'Neogit', action = ':Neogit' },
-    { icon = '', key = 'G', desc = 'Git Status', action = ':lua Snacks.picker.git_status()' },
-    { icon = '󱜙 ', key = 'c', desc = 'Claude Code', action = ':ClaudeCode' },
-    { icon = ' ', key = 'f', desc = 'Go To File', action = ':GoToFile' },
-    { icon = ' ', key = '/', desc = 'Find Text', action = ':Grep' },
-    { icon = ' ', key = 'r', desc = 'Reload Dashboard', action = ':lua Snacks.dashboard.open()' },
-    { icon = '󰩈', key = 'q', desc = 'Quit', action = ':qa' },
+    { icon = '⏳', title = 'Recent Files', section = 'recent_files', cwd = true, indent = 2, padding = 1 },
+    { icon = '🍃', key = 'g', desc = 'Neogit', action = ':Neogit' },
+    { icon = '🌳', key = 'G', desc = 'Git Status', action = ':lua Snacks.picker.git_status()' },
+    { icon = '🤖 ', key = 'c', desc = 'Claude Code', action = ':ClaudeCode' },
+    { icon = '📝', key = 'f', desc = 'Go To File', action = ':GoToFile' },
+    { icon = '🔎', key = '/', desc = 'Find Text', action = ':Grep' },
+    { icon = '🔄', key = 'r', desc = 'Reload Dashboard', action = ':lua Snacks.dashboard.open()' },
+    { icon = '👋', key = 'q', desc = 'Quit', action = ':qa' },
   },
 }
