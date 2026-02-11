@@ -7,8 +7,8 @@ return {
   },
   opts = {
     integrations = {
-      telescope = false,
       diffview = true,
+      snacks = true,
     },
     graph_style = 'unicode',
     commit_editor = {
