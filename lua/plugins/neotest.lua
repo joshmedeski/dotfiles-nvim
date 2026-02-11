@@ -26,12 +26,12 @@ return {
         require 'neotest-vitest' {
           args = { '--coverage' },
         },
-        require('neotest-playwright').adapter {
-          options = {
-            persist_project_selection = true,
-            enable_dynamic_test_discovery = true,
-          },
-        },
+        -- require('neotest-playwright').adapter {
+        --   options = {
+        --     persist_project_selection = true,
+        --     enable_dynamic_test_discovery = true,
+        --   },
+        -- },
       },
     }
   end,
