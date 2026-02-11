@@ -16,11 +16,18 @@ return {
     {
       'folke/lazydev.nvim',
       ft = 'lua',
+      dependencies = {
+        { 'gonstoll/wezterm-types', lazy = true },
+      },
       opts = {
         library = {
+          'lazy.nvim',
+          { 'nvim-dap-ui' },
+          { path = '${3rd}/busted/library', words = { 'describe' } },
+          { path = '${3rd}/luassert/library', words = { 'assert' } },
           { path = '${3rd}/luv/library', words = { 'vim%.uv' } },
           { path = 'snacks.nvim', words = { 'Snacks' } },
-          { 'nvim-dap-ui' },
+          { path = 'wezterm-types', mods = { 'wezterm' } },
         },
       },
     },
