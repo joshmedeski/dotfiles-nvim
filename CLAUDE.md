@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Overview
 
-This is Josh Medeski's personal Neovim configuration, written entirely in Lua. Built on kickstart.nvim with Lazy.nvim as the plugin manager. All plugins default to lazy loading (`defaults = { lazy = true }`).
+This is Josh Medeski's personal Neovim configuration, written entirely in Lua. Uses Lazy.nvim as the plugin manager. All plugins default to lazy loading (`defaults = { lazy = true }`).
 
 ## Code Style
 
@@ -28,7 +28,6 @@ Leader key (`<space>`) **must** be set in `options.lua` before Lazy.nvim loads p
 
 - `lua/utils/` - Core configuration (options, keymaps, autocommands, commands, highlights, icons, events)
 - `lua/plugins/` - One file per plugin, auto-discovered by Lazy.nvim via `require('lazy').setup({ import = 'plugins' })`
-- `lua/kickstart/` - Upstream kickstart.nvim modules (health checks)
 
 ### Plugin File Convention
 

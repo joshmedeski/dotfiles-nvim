@@ -1,6 +1,6 @@
 # Josh's Neovim Configuration
 
-A personalized Neovim configuration built on top of kickstart.nvim, featuring a modular architecture and extensive plugin ecosystem.
+A personalized Neovim configuration featuring a modular architecture and extensive plugin ecosystem.
 
 ## Configuration Structure
 
@@ -23,9 +23,6 @@ A personalized Neovim configuration built on top of kickstart.nvim, featuring a 
 │   ├── plugins/            # Plugin configurations
 │   │   ├── [50+ plugin configs]
 │   │   └── init.lua
-│   └── kickstart/          # Kickstart.nvim modules
-│       ├── health.lua
-│       └── plugins/
 └── README.md
 ```
 
@@ -152,7 +149,7 @@ All plugins are configured to work together seamlessly while maintaining individ
 
 ### Install Neovim
 
-Kickstart.nvim targets *only* the latest
+This config targets the latest
 ['stable'](https://github.com/neovim/neovim/releases/tag/stable) and latest
 ['nightly'](https://github.com/neovim/neovim/releases/tag/nightly) of Neovim.
 If you are experiencing issues, please make sure you have the latest versions.
