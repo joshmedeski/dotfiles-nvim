@@ -9,7 +9,7 @@ This is Josh Medeski's personal Neovim configuration, written entirely in Lua. B
 ## Code Style
 
 - Lua formatted with StyLua: 160 column width, 2-space indentation, single quotes preferred, no call parentheses
-- Run `stylua .` from the repo root to format
+- StyLua runs automatically via Claude hook on Write/Edit (see `.claude/settings.json`)
 - Config: `.stylua.toml`
 
 ## Architecture
