@@ -47,7 +47,6 @@ A personalized Neovim configuration featuring a modular architecture and extensi
 Over 50 specialized plugins organized by category:
 
 **AI & Code Assistance**
-- `avante.lua` - AI-powered code editing and chat interface
 - `claudecode.lua` - Claude Code integration for seamless AI development
 - `copilot.lua` / `copilot-chat.lua` - GitHub Copilot code completion and chat
 - `codecompanion.lua` - AI code companion with multiple model support
@@ -71,7 +70,6 @@ Over 50 specialized plugins organized by category:
 
 **UI & Navigation**
 - `which_key.lua` - Key binding help
-- `lualine.lua` - Status line
 - `flash.lua` - Enhanced navigation
 - `oil.lua` - File explorer
 - `noice.lua` - Enhanced UI
@@ -144,6 +142,17 @@ The configuration is designed for developers who want:
 - Customizable and extensible architecture
 
 All plugins are configured to work together seamlessly while maintaining individual functionality and customization options.
+
+## Previously Used
+
+Plugins that were part of this config but have since been removed:
+
+- **[avante.nvim](https://github.com/yetone/avante.nvim)** - AI-powered code editing (replaced by codecompanion)
+- **[nvim-cmp](https://github.com/hrsh7th/nvim-cmp)** - Completion engine (replaced by blink.cmp)
+- **[lualine.nvim](https://github.com/nvim-lualine/lualine.nvim)** - Statusline (removed; using hidden statusline)
+- **[sidekick.nvim](https://github.com/folke/sidekick.nvim)** - CLI tool integration
+- **[tiny-inline-diagnostic.nvim](https://github.com/rachartier/tiny-inline-diagnostic.nvim)** - Inline LSP diagnostics display
+- **[pixel.nvim](https://github.com/bjarneo/pixel.nvim)** - Alternative colorscheme
 
 ## Installation
 
