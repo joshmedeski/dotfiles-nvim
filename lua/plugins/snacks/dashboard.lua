@@ -74,7 +74,7 @@ return {
   formats = {},
   sections = {
     get_header,
-    get_unstaged_changes,
+    -- get_unstaged_changes,
     { icon = '⏳', title = 'Recent Files', section = 'recent_files', cwd = true, indent = 2, padding = 1 },
     { icon = '📝', key = 'f', desc = 'Files', action = ':GoToFile' },
     { icon = '🤖 ', key = 'c', desc = 'Claude Code', action = ':ClaudeCode' },
