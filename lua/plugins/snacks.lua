@@ -8,7 +8,25 @@ return {
   opts = {
     dashboard = require 'plugins.snacks.dashboard',
     image = { enabled = true },
-    picker = { enabled = true },
+    picker = {
+      enabled = true,
+      layout = {
+        layout = {
+          box = 'horizontal',
+          width = 0.8,
+          min_width = 120,
+          height = 0.8,
+          {
+            box = 'vertical',
+            border = true,
+            title = '{title} {live} {flags}',
+            { win = 'input', height = 1, border = 'bottom' },
+            { win = 'list', border = 'none' },
+          },
+          { win = 'preview', title = '{preview}', border = true, width = 0.5 },
+        },
+      },
+    },
     notifier = { enabled = true },
     input = { enabled = true },
     bigfile = { enabled = true },
