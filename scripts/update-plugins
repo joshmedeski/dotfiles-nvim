@@ -1,0 +1,5 @@
+#!/bin/bash
+set -euo pipefail
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+# Filter out Lazy.nvim's ANSI-colored progress output, keep only our report
+nvim --headless -c "luafile ${SCRIPT_DIR}/update-plugins.lua" 2>/dev/null | sed -n '/^=== Plugin Update Report ===/,$p'
