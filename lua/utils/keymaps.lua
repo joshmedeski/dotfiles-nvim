@@ -16,6 +16,9 @@ vim.keymap.set('n', '<leader>rN', function()
   return ':IncRename ' .. vim.fn.expand '<cword>'
 end, { expr = true })
 
+-- Exit insert mode with jk
+vim.keymap.set('i', 'jk', '<Esc>', { desc = 'Exit insert mode' })
+
 -- Clear highlights on search when pressing <Esc> in normal mode
 --  See `:help hlsearch`
 vim.keymap.set('n', '<Esc>', '<cmd>nohlsearch<CR>')
