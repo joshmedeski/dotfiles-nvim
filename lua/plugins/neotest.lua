@@ -8,6 +8,7 @@ return {
     'marilari88/neotest-vitest',
     'thenbe/neotest-playwright',
     { 'fredrikaverpil/neotest-golang', version = '*' },
+    'rcasia/neotest-bash',
   },
 
   config = function()
@@ -25,6 +26,9 @@ return {
         },
         require 'neotest-vitest' {
           args = { '--coverage' },
+        },
+        require 'neotest-bash' {
+          args = { '--coverage', '--coverage-paths', 'bin', '--coverage-report', vim.fn.getcwd() .. '/coverage/lcov.info' },
         },
         -- require('neotest-playwright').adapter {
         --   options = {

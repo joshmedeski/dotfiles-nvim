@@ -22,6 +22,9 @@ return {
       typescript = {
         coverage_file = vim.fn.getcwd() .. '/coverage/lcov.info',
       },
+      sh = {
+        coverage_file = vim.fn.getcwd() .. '/coverage/lcov.info',
+      },
     },
   },
 }
