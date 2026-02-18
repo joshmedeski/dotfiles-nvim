@@ -77,7 +77,7 @@ return {
     -- get_unstaged_changes,
     { icon = '⏳', title = 'Recent Files', section = 'recent_files', cwd = true, indent = 2, padding = 1 },
     { icon = '📝', key = 'f', desc = 'Files', action = ':GoToFile' },
-    { icon = '🤖 ', key = 'c', desc = 'Claude Code', action = ':ClaudeCode' },
+    { icon = '🤖', key = 'c', desc = 'Claude Code', action = ':ClaudeCode' },
     { icon = '🌳', key = 'g', desc = 'Neogit', action = ':Neogit' },
     { icon = '🔎', key = '/', desc = 'Find Text', action = ':Grep' },
     { icon = '🌳', key = 'G', desc = 'Git Status', action = ':lua Snacks.picker.git_status()' },
