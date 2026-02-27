@@ -92,6 +92,21 @@ vim.api.nvim_create_autocmd({ 'BufRead' }, {
   end,
 })
 
+vim.api.nvim_create_autocmd('BufDelete', {
+  desc = 'Open dashboard when last buffer is closed',
+  group = vim.api.nvim_create_augroup('dashboard-on-empty', { clear = true }),
+  callback = function()
+    vim.schedule(function()
+      local bufs = vim.tbl_filter(function(b)
+        return vim.api.nvim_buf_is_valid(b) and vim.bo[b].buflisted and vim.bo[b].buftype == '' and vim.api.nvim_buf_get_name(b) ~= ''
+      end, vim.api.nvim_list_bufs())
+      if #bufs == 0 then
+        Snacks.dashboard.open()
+      end
+    end)
+  end,
+})
+
 -- vim.api.nvim_create_autocmd('BufWritePost', {
 --   pattern = { 'sketchybarrc' },
 --   command = '!brew services restart sketchybar',
