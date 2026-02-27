@@ -58,6 +58,13 @@ return {
   },
   keys = {
     {
+      '<leader>H',
+      function()
+        Snacks.dashboard.open()
+      end,
+      desc = 'Dashboard',
+    },
+    {
       '<leader>,',
       function()
         Snacks.picker.buffers()
