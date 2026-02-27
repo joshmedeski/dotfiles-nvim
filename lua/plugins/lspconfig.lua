@@ -189,6 +189,10 @@ return {
 
       gopls = {},
 
+      taplo = {},
+
+      vtsls = {},
+
       eslint = {
         settings = { workingDirectories = { mode = 'auto' } },
         filetypes = {
