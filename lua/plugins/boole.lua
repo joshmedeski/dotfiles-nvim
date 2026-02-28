@@ -10,6 +10,7 @@ return {
       -- 6
     },
     additions = {
+      { 'log', 'error', 'info' },
       { 'production', 'development', 'test', 'sandbox' },
       { 'fatal', 'error', 'warn', 'info', 'debug', 'trace' },
       { 'around', 'between' },
