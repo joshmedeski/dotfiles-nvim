@@ -19,20 +19,36 @@ return {
 
   config = function(_, opts)
     require('catppuccin').setup(opts)
+    vim.cmd.colorscheme 'catppuccin'
+    local last_mode = nil
     require('dark_notify').run {
-      schemes = {
-        dark = 'catppuccin-mocha',
-        light = 'catppuccin-latte',
-      },
+      onchange = function(mode)
+        last_mode = mode
+        vim.o.background = mode
+      end,
     }
+    vim.api.nvim_create_autocmd('OptionSet', {
+      group = vim.api.nvim_create_augroup('dark-notify-guard', { clear = true }),
+      pattern = 'background',
+      callback = function()
+        if last_mode and vim.o.background ~= last_mode then
+          vim.schedule(function()
+            vim.o.background = last_mode
+          end)
+        end
+      end,
+    })
   end,
 
   ---@class CatppuccinOptions
   opts = function()
-    vim.g.catppuccin_debug = true
     -- TODO: generate dynamics colors
     return {
-      flavour = 'mocha',
+      flavour = 'auto',
+      background = {
+        light = 'latte',
+        dark = 'mocha',
+      },
       term_colors = true,
       transparent_background = true,
       -- TODO: add sesh custom color scheme overrides 👀
