@@ -17,7 +17,7 @@ return {
       'folke/lazydev.nvim',
       ft = 'lua',
       dependencies = {
-        { 'gonstoll/wezterm-types', lazy = true },
+        { 'DrKJeff16/wezterm-types', lazy = true },
       },
       opts = {
         library = {
