@@ -72,16 +72,6 @@ return {
       desc = 'Buffers',
     },
     {
-      '<leader>/',
-      function()
-        ---@diagnostic disable-next-line: missing-fields
-        Snacks.picker.grep {
-          hidden = true,
-        }
-      end,
-      desc = 'Grep',
-    },
-    {
       '<leader>:',
       function()
         Snacks.picker.command_history()
@@ -95,28 +85,6 @@ return {
         Snacks.picker.buffers()
       end,
       desc = 'Buffers',
-    },
-    {
-      '<leader>fc',
-      function()
-        ---@diagnostic disable-next-line: missing-fields
-        Snacks.picker.files { cwd = print(vim.fn.stdpath 'config') }
-      end,
-      desc = 'Find Config File',
-    },
-    {
-      '<leader>ff',
-      function()
-        Snacks.picker.files()
-      end,
-      desc = 'Find Files',
-    },
-    {
-      '<leader>fg',
-      function()
-        Snacks.picker.git_files()
-      end,
-      desc = 'Find Git Files',
     },
     {
       '<leader>fr',
@@ -154,21 +122,6 @@ return {
         Snacks.picker.grep_buffers()
       end,
       desc = 'Grep Open Buffers',
-    },
-    {
-      '<leader>sg',
-      function()
-        Snacks.picker.grep()
-      end,
-      desc = 'Grep',
-    },
-    {
-      '<leader>sw',
-      function()
-        Snacks.picker.grep_word()
-      end,
-      desc = 'Visual selection or word',
-      mode = { 'n', 'x' },
     },
     -- search
     {
