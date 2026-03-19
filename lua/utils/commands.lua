@@ -10,9 +10,9 @@
 -- telescope pickers
 vim.cmd [[command! -nargs=0 Commit :Neogit commit]]
 vim.cmd [[command! -nargs=0 GoToCommand :lua Snacks.picker.command_history()]]
-vim.cmd [[command! -nargs=0 GoToFile :lua Snacks.picker.smart()]]
+vim.cmd [[command! -nargs=0 GoToFile :lua require('fff').find_files()]]
 vim.cmd [[command! -nargs=0 GoToSymbol :Telescope lsp_document_symbols]]
-vim.cmd [[command! -nargs=0 Grep :lua Snacks.picker.grep()]]
+vim.cmd [[command! -nargs=0 Grep :lua require('fff').live_grep()]]
 vim.cmd [[command! -nargs=0 SmartGoTo :Telescope smart_goto]]
 vim.cmd [[command! -nargs=0 Zen :lua Snacks.zen()]]
 vim.cmd [[command! -nargs=0 FindAndReplace :lua require('grug-far').open()]]
