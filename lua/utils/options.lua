@@ -84,6 +84,9 @@ vim.opt.shiftwidth = 2
 vim.opt.expandtab = true
 vim.opt.smartindent = true
 
+-- auto-reload files changed externally (e.g. by Claude Code)
+vim.opt.autoread = true
+
 -- backup
 vim.opt.backup = false
 vim.opt.swapfile = false
