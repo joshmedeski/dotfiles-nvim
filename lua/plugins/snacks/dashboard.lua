@@ -80,6 +80,7 @@ return {
     { icon = '🤖', key = 'c', desc = 'Claude Code', action = ':ClaudeCode' },
     { icon = '📝', key = 'p', desc = 'Claude Code (Plan)', action = ':ClaudeCode --permission-mode plan' },
     { icon = '⏩︎', key = 'r', desc = 'Claude Code (Resume)', action = ':ClaudeCode --resume' },
+    { icon = '⏭️', key = 'C', desc = 'Claude Code (Continue)', action = ':ClaudeCode --continue' },
     { icon = '🌳', key = 'g', desc = 'Neogit', action = ':Neogit' },
     { icon = '🔎', key = '/', desc = 'Find Text', action = ':Grep' },
     { icon = '🌳', key = 'G', desc = 'Git Status', action = ':lua Snacks.picker.git_status()' },
