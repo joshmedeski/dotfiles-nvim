@@ -88,6 +88,14 @@ return {
     terminal = {
       provider = vim.env.TMUX and tmux_provider or 'snacks',
     },
+    -- Diff Integration
+    diff_opts = {
+      layout = 'vertical', -- "vertical" or "horizontal"
+      open_in_new_tab = true,
+      keep_terminal_focus = false, -- If true, moves focus back to terminal after diff opens
+      hide_terminal_in_new_tab = true,
+      -- on_new_file_reject = "keep_empty", -- "keep_empty" or "close_window"
+    },
   },
   cmd = {
     'ClaudeCode',
