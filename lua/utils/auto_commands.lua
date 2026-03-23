@@ -114,6 +114,60 @@ vim.api.nvim_create_autocmd('BufDelete', {
   end,
 })
 
+-- Detect external file changes (e.g. Claude Code edits)
+vim.api.nvim_create_autocmd({ 'FocusGained', 'CursorHold' }, {
+  group = vim.api.nvim_create_augroup('claude-checktime', { clear = true }),
+  command = 'silent! checktime',
+})
+
+-- Save buffer content before reload for diff comparison
+vim.api.nvim_create_autocmd('FileChangedShell', {
+  group = vim.api.nvim_create_augroup('claude-focus-changed-line', { clear = true }),
+  callback = function(args)
+    local bufnr = args.buf
+    if vim.api.nvim_buf_is_valid(bufnr) then
+      vim.b[bufnr]._pre_reload_lines = vim.api.nvim_buf_get_lines(bufnr, 0, -1, false)
+    end
+  end,
+})
+
+-- Jump to first changed line after external reload
+vim.api.nvim_create_autocmd('FileChangedShellPost', {
+  group = 'claude-focus-changed-line',
+  callback = function(args)
+    local bufnr = args.buf
+    local old_lines = vim.b[bufnr]._pre_reload_lines
+    vim.b[bufnr]._pre_reload_lines = nil
+
+    if not old_lines then
+      return
+    end
+
+    local new_lines = vim.api.nvim_buf_get_lines(bufnr, 0, -1, false)
+
+    local first_changed = nil
+    local max_len = math.max(#old_lines, #new_lines)
+    for i = 1, max_len do
+      if old_lines[i] ~= new_lines[i] then
+        first_changed = i
+        break
+      end
+    end
+
+    if first_changed then
+      for _, win in ipairs(vim.api.nvim_list_wins()) do
+        if vim.api.nvim_win_get_buf(win) == bufnr then
+          vim.api.nvim_win_set_cursor(win, { first_changed, 0 })
+          vim.api.nvim_win_call(win, function()
+            vim.cmd 'normal! zz'
+          end)
+          break
+        end
+      end
+    end
+  end,
+})
+
 -- vim.api.nvim_create_autocmd('BufWritePost', {
 --   pattern = { 'sketchybarrc' },
 --   command = '!brew services restart sketchybar',

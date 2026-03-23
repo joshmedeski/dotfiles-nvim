@@ -12,6 +12,10 @@ return {
   },
 
   config = function()
+    local function has_playwright_config()
+      return vim.fn.filereadable(vim.fn.getcwd() .. '/playwright.config.ts') == 1 or vim.fn.filereadable(vim.fn.getcwd() .. '/playwright.config.js') == 1
+    end
+
     ---@diagnostic disable-next-line: missing-fields
     require('neotest').setup {
       adapters = {
@@ -24,18 +28,35 @@ return {
             '-coverprofile=' .. vim.fn.getcwd() .. '/coverage.out',
           },
         },
+        require('neotest-playwright').adapter {
+          options = {
+            persist_project_selection = true,
+            enable_dynamic_test_discovery = true,
+          },
+          filter_dir = function(name)
+            return name ~= 'node_modules'
+          end,
+          is_test_file = function(file_path)
+            if not has_playwright_config() then
+              return false
+            end
+            return string.match(file_path, '%.spec%.[jt]sx?$') ~= nil or string.match(file_path, '%.test%.[jt]sx?$') ~= nil
+          end,
+        },
         require 'neotest-vitest' {
           args = { '--coverage' },
+          is_test_file = function(file_path)
+            if has_playwright_config() then
+              return false
+            end
+            return string.match(file_path, '%.spec%.[jt]sx?$') ~= nil
+              or string.match(file_path, '%.test%.[jt]sx?$') ~= nil
+              or string.match(file_path, '__tests__') ~= nil
+          end,
         },
         require 'neotest-bash' {
           args = { '--coverage', '--coverage-paths', 'bin', '--coverage-report', vim.fn.getcwd() .. '/coverage/lcov.info' },
         },
-        -- require('neotest-playwright').adapter {
-        --   options = {
-        --     persist_project_selection = true,
-        --     enable_dynamic_test_discovery = true,
-        --   },
-        -- },
       },
     }
   end,
