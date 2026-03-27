@@ -114,7 +114,6 @@ return {
         },
         blink_cmp = true,
         cmp = true,
-        copilot_vim = true,
         dropbar = {
           enabled = true,
           color_mode = true,
