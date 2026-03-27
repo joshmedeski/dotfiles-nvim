@@ -38,6 +38,7 @@ return {
       -- You can use 'stop_after_first' to run the first available formatter from the list
       lua = { 'stylua' },
       javascript = { 'prettierd', 'prettier', 'biome', stop_after_first = true },
+      yaml = { 'prettierd', 'prettier', 'biome', stop_after_first = true },
       typescript = { 'prettierd', 'prettier', 'biome', stop_after_first = true },
       json = { 'prettierd', 'prettier', 'biome', stop_after_first = true },
       css = { 'prettierd', 'prettier', 'biome', stop_after_first = true },
