@@ -10,7 +10,16 @@ return {
     'folke/lazydev.nvim',
     'MahanRahmati/blink-nerdfont.nvim',
     'moyiz/blink-emoji.nvim',
-    'rafamadriz/friendly-snippets',
+    {
+      'echasnovski/mini.snippets',
+      dependencies = { 'rafamadriz/friendly-snippets' },
+      config = function()
+        local snippets = require 'mini.snippets'
+        snippets.setup {
+          snippets = { snippets.gen_loader.from_lang() },
+        }
+      end,
+    },
     {
       'Kaiser-Yang/blink-cmp-git',
       dependencies = { 'nvim-lua/plenary.nvim' },
@@ -26,6 +35,7 @@ return {
   opts = {
     appearance = { nerd_font_variant = 'mono' },
     signature = { enabled = true },
+    snippets = { preset = 'mini_snippets' },
 
     keymap = {
       preset = 'default',
