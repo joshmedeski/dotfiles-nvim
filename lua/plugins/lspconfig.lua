@@ -285,21 +285,7 @@ return {
           },
         },
 
-        astro = {
-          filetypes = {
-            'javascript',
-            'typescript',
-            'json',
-            'jsonc',
-            'javascriptreact',
-            'typescriptreact',
-            'astro',
-            'svelte',
-            'vue',
-            'css',
-          },
-          root_dir = require('lspconfig.util').root_pattern 'astro.config.mjs',
-        },
+        astro = {},
 
         oxfmt = {},
         oxlint = {},
