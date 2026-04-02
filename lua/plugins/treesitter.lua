@@ -25,7 +25,9 @@ return {
         'vim',
         'vimdoc',
         'typescript',
+        'fish',
         'just',
+        'yaml',
       }
 
       -- Enable highlighting for all filetypes

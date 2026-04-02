@@ -72,6 +72,14 @@ return {
       })
       vim.lsp.enable 'gh_actions_ls'
 
+      vim.lsp.config('fish_lsp', {
+        cmd = { 'fish-lsp', 'start' },
+        filetypes = { 'fish' },
+        root_markers = { '.git' },
+        single_file_support = true,
+      })
+      vim.lsp.enable 'fish_lsp'
+
       vim.api.nvim_create_autocmd('LspAttach', {
         group = vim.api.nvim_create_augroup('jam-lsp-attach', { clear = true }),
         callback = function(event)
@@ -211,6 +219,14 @@ return {
         gopls = {},
 
         taplo = {},
+
+        yamlls = {
+          settings = {
+            yaml = {
+              schemaStore = { enable = true },
+            },
+          },
+        },
 
         vtsls = {
           filetypes = {
