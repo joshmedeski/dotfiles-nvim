@@ -290,7 +290,23 @@ return {
 
         lua_ls = {},
 
-        jsonls = {},
+        jsonls = {
+          settings = {
+            json = {
+              schemas = {
+                {
+                  fileMatch = { '**/.claude/settings.json', '**/.claude/settings.local.json' },
+                  url = 'https://json.schemastore.org/claude-code-settings.json',
+                },
+                {
+                  fileMatch = { '**/.claude/keybindings.json' },
+                  url = 'https://json.schemastore.org/claude-code-keybindings.json',
+                },
+              },
+              validate = { enable = true },
+            },
+          },
+        },
 
         arduino_language_server = {
           filetypes = {
