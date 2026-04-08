@@ -24,6 +24,7 @@ return {
         'query',
         'vim',
         'vimdoc',
+        'javascript',
         'typescript',
         'fish',
         'json',
