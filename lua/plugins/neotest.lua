@@ -11,8 +11,46 @@ return {
   },
 
   config = function()
-    local function has_playwright_config()
-      return vim.fn.filereadable(vim.fn.getcwd() .. '/playwright.config.ts') == 1 or vim.fn.filereadable(vim.fn.getcwd() .. '/playwright.config.js') == 1
+    local PLAYWRIGHT_CONFIGS = {
+      'playwright.config.ts',
+      'playwright.config.js',
+      'playwright.config.mjs',
+      'playwright.config.cjs',
+    }
+    local VITEST_CONFIGS = {
+      'vitest.config.ts',
+      'vitest.config.js',
+      'vitest.config.mjs',
+      'vitest.config.cjs',
+      'vite.config.ts',
+      'vite.config.js',
+      'vite.config.mjs',
+      'vite.config.cjs',
+    }
+
+    local function find_nearest(file_path, names)
+      local matches = vim.fs.find(names, {
+        upward = true,
+        path = vim.fs.dirname(file_path),
+        type = 'file',
+      })
+      return matches[1]
+    end
+
+    -- Walks up from the test file to find the nearest playwright/vitest config.
+    -- Works correctly in monorepos where each package has its own config.
+    local function detect_js_runner(file_path)
+      local playwright = find_nearest(file_path, PLAYWRIGHT_CONFIGS)
+      local vitest = find_nearest(file_path, VITEST_CONFIGS)
+      if playwright and vitest then
+        -- Closer config (longer absolute path) wins
+        return #playwright >= #vitest and 'playwright' or 'vitest'
+      elseif playwright then
+        return 'playwright'
+      elseif vitest then
+        return 'vitest'
+      end
+      return nil
     end
 
     ---@diagnostic disable-next-line: missing-fields
@@ -36,7 +74,7 @@ return {
             return name ~= 'node_modules'
           end,
           is_test_file = function(file_path)
-            if not has_playwright_config() then
+            if detect_js_runner(file_path) ~= 'playwright' then
               return false
             end
             return string.match(file_path, '%.spec%.[jt]sx?$') ~= nil or string.match(file_path, '%.test%.[jt]sx?$') ~= nil
@@ -45,7 +83,7 @@ return {
         require 'neotest-vitest' {
           args = { '--coverage' },
           is_test_file = function(file_path)
-            if has_playwright_config() then
+            if detect_js_runner(file_path) == 'playwright' then
               return false
             end
             return string.match(file_path, '%.spec%.[jt]sx?$') ~= nil
