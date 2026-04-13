@@ -14,6 +14,7 @@ return {
       require('nvim-treesitter').install {
         'bash',
         'c',
+        'css',
         'diff',
         'html',
         'json5',
@@ -25,6 +26,7 @@ return {
         'vim',
         'vimdoc',
         'javascript',
+        'tsx',
         'typescript',
         'fish',
         'json',
