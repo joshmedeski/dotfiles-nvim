@@ -41,6 +41,6 @@ return {
       end,
     },
 
-    ui = { enabled = false },
+    ui = { enable = false },
   },
 }
