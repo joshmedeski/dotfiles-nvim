@@ -17,5 +17,8 @@ return {
     dash = {
       icon = '󰇘',
     },
+    link = {
+      wiki = { icon = '' },
+    },
   },
 }
