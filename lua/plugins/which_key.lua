@@ -62,6 +62,7 @@ return {
       { '<leader>c', group = '[c]ode', mode = { 'n', 'x' } },
       { '<leader>d', group = '[d]ocument' },
       { '<leader>g', group = '[g]it', icon = { icon = '󰊢', color = 'green' } },
+      { '<leader>p', group = '[p]i', icon = '🤖' },
       { '<leader>r', group = '[r]ename' },
       { '<leader>s', group = '[s]earch' },
       { '<leader>w', group = '[w]orkspace' },
