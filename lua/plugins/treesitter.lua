@@ -12,10 +12,12 @@ return {
 
       -- Install parsers (replaces ensure_installed)
       require('nvim-treesitter').install {
+        'astro',
         'bash',
         'c',
         'css',
         'diff',
+        'glsl',
         'html',
         'json5',
         'lua',
