@@ -16,6 +16,15 @@ local function current_file_paths()
   }
 end
 
+local function current_file_ref()
+  local file = current_file_paths()
+  if not file then
+    return nil
+  end
+
+  return string.format('@%s', file.relative)
+end
+
 local function current_buffer_message(prompt)
   local file = current_file_paths()
   if not file then
@@ -88,16 +97,110 @@ local function send_to_pi(message)
   require('pi-nvim').prompt(message)
 end
 
-local function focus_tmux_last_pane()
+local function trim_trailing_whitespace(text)
+  return text:gsub('%s+$', '')
+end
+
+local function last_tmux_pane_id()
   if not vim.env.TMUX then
     notify('Not running inside tmux', vim.log.levels.WARN)
+    return nil
+  end
+
+  local pane_id = vim.fn.system { 'tmux', 'display-message', '-p', '-t', '!', '#{pane_id}' }
+  if vim.v.shell_error == 0 then
+    pane_id = trim_trailing_whitespace(pane_id)
+    if pane_id ~= '' then
+      return pane_id
+    end
+  end
+
+  local panes = vim.fn.system { 'tmux', 'list-panes', '-F', '#{pane_id} #{pane_last}' }
+  if vim.v.shell_error ~= 0 then
+    notify('Failed to resolve the last tmux pane', vim.log.levels.ERROR)
+    return nil
+  end
+
+  for line in vim.gsplit(panes, '\n', { plain = true, trimempty = true }) do
+    local id, is_last = line:match '^(%%[%w]+)%s+(%d+)$'
+    if is_last == '1' then
+      return id
+    end
+  end
+
+  notify('No last tmux pane found', vim.log.levels.WARN)
+  return nil
+end
+
+local function send_literal_to_tmux_pane(pane_id, text)
+  vim.fn.system { 'tmux', 'send-keys', '-t', pane_id, '-l', text }
+  if vim.v.shell_error ~= 0 then
+    notify(string.format('Failed to send keys to tmux pane %s', pane_id), vim.log.levels.ERROR)
+    return false
+  end
+
+  return true
+end
+
+local function send_enter_to_tmux_pane(pane_id)
+  vim.fn.system { 'tmux', 'send-keys', '-t', pane_id, 'C-m' }
+  if vim.v.shell_error ~= 0 then
+    notify(string.format('Failed to submit input in tmux pane %s', pane_id), vim.log.levels.ERROR)
+    return false
+  end
+
+  return true
+end
+
+local function focus_tmux_pane(pane_id)
+  vim.fn.system { 'tmux', 'select-pane', '-t', pane_id }
+  if vim.v.shell_error ~= 0 then
+    notify(string.format('Failed to focus tmux pane %s', pane_id), vim.log.levels.ERROR)
+    return false
+  end
+
+  return true
+end
+
+local function focus_tmux_last_pane()
+  local pane_id = last_tmux_pane_id()
+  if not pane_id then
     return
   end
 
-  vim.fn.system { 'tmux', 'last-pane' }
-  if vim.v.shell_error ~= 0 then
-    notify('Failed to focus the last tmux pane', vim.log.levels.ERROR)
+  focus_tmux_pane(pane_id)
+end
+
+local function type_file_ref_in_pi()
+  local pane_id = last_tmux_pane_id()
+  local file_ref = current_file_ref()
+  if not pane_id or not file_ref then
+    return
   end
+
+  if send_literal_to_tmux_pane(pane_id, file_ref .. ' ') then
+    focus_tmux_pane(pane_id)
+    notify(string.format('Typed %s in tmux pane %s', file_ref, pane_id))
+  end
+end
+
+local function send_file_ref_to_pi()
+  local pane_id = last_tmux_pane_id()
+  local file_ref = current_file_ref()
+  if not pane_id or not file_ref then
+    return
+  end
+
+  if not send_literal_to_tmux_pane(pane_id, file_ref) then
+    return
+  end
+
+  if not send_enter_to_tmux_pane(pane_id) then
+    return
+  end
+
+  focus_tmux_pane(pane_id)
+  notify(string.format('Sent %s to tmux pane %s', file_ref, pane_id))
 end
 
 local function send_file_now()
@@ -109,7 +212,9 @@ local function send_buffer_now()
 end
 
 local function review_current_file()
-  send_to_pi(current_file_message 'Review this file and suggest improvements. Focus on correctness, maintainability, repo style, and Neovim/Lua best practices.')
+  send_to_pi(
+    current_file_message 'Review this file and suggest improvements. Focus on correctness, maintainability, repo style, and Neovim/Lua best practices.'
+  )
 end
 
 local function in_visual_mode()
@@ -134,12 +239,7 @@ local function refactor_with_pi()
 end
 
 local function handoff_to_pi()
-  if in_visual_mode() then
-    send_to_pi(selection_message())
-  else
-    send_to_pi(current_file_message())
-  end
-  focus_tmux_last_pane()
+  send_file_ref_to_pi()
 end
 
 return {
@@ -162,6 +262,8 @@ return {
     'PiRefactor',
     'PiFocus',
     'PiHandOff',
+    'PiTypeFileRef',
+    'PiSendFileRef',
   },
   keys = {
     { '<leader>p', '<cmd>Pi<cr>', mode = { 'n', 'v' }, desc = 'Open pi dialog' },
@@ -171,10 +273,11 @@ return {
     { '<leader>pF', send_file_now, desc = 'Send file to pi now' },
     { '<leader>pb', '<cmd>PiSendBuffer<cr>', desc = 'Send buffer to pi' },
     { '<leader>pB', send_buffer_now, desc = 'Send buffer to pi now' },
+    { '<leader>pm', type_file_ref_in_pi, desc = 'Type @{file} in pi pane' },
+    { '<leader>pt', send_file_ref_to_pi, desc = 'Send @{file} to pi pane' },
     { '<leader>pr', review_current_file, mode = 'n', desc = 'Review current file with pi' },
     { '<leader>pe', explain_with_pi, mode = { 'n', 'v' }, desc = 'Explain with pi' },
     { '<leader>px', refactor_with_pi, mode = { 'n', 'v' }, desc = 'Refactor with pi' },
-    { '<leader>pt', handoff_to_pi, mode = { 'n', 'v' }, desc = 'Hand off to pi + focus tmux pane' },
     { '<leader>pT', focus_tmux_last_pane, desc = 'Focus last tmux pane' },
     { '<leader>pi', '<cmd>PiPing<cr>', desc = 'Ping pi' },
     { '<leader>pj', '<cmd>PiSessions<cr>', desc = 'Switch pi session' },
@@ -188,6 +291,8 @@ return {
     vim.api.nvim_create_user_command('PiExplain', explain_with_pi, { range = true, desc = 'Ask pi to explain the current selection or file' })
     vim.api.nvim_create_user_command('PiRefactor', refactor_with_pi, { range = true, desc = 'Ask pi to refactor the current selection or file' })
     vim.api.nvim_create_user_command('PiFocus', focus_tmux_last_pane, { desc = 'Focus the last tmux pane' })
-    vim.api.nvim_create_user_command('PiHandOff', handoff_to_pi, { range = true, desc = 'Send context to pi and focus tmux' })
+    vim.api.nvim_create_user_command('PiHandOff', handoff_to_pi, { desc = 'Send @{file} to the pi tmux pane' })
+    vim.api.nvim_create_user_command('PiTypeFileRef', type_file_ref_in_pi, { desc = 'Type @{file} into the pi tmux pane' })
+    vim.api.nvim_create_user_command('PiSendFileRef', send_file_ref_to_pi, { desc = 'Send @{file} to the pi tmux pane' })
   end,
 }
