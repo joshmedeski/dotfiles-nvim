@@ -187,12 +187,55 @@ return {
       end,
     }
 
+    local function get_vi_mode_label()
+      local mode = vim.fn.mode(1)
+
+      if mode:match '^i' then
+        return 'insert'
+      elseif mode:match '^n' then
+        return 'normal'
+      elseif mode:match '^v' then
+        return 'visual'
+      elseif mode == 'V' then
+        return 'v-line'
+      elseif mode == string.char(22) or mode:match('^' .. string.char(22)) then
+        return 'v-block'
+      elseif mode:match '^R' then
+        return 'replace'
+      elseif mode:match '^c' then
+        return 'command'
+      elseif mode:match '^t' then
+        return 'terminal'
+      elseif mode:match '^s' or mode == 'S' or mode == string.char(19) then
+        return 'select'
+      end
+
+      return mode
+    end
+
     ---@class dropbar_source_t
     local smart_path = {
       get_symbols = function(buff, _, _)
         local stats = {}
 
-        local abs_path = vim.api.nvim_buf_get_name(buff) -- Get absolute path of current buffer
+        local abs_path = vim.api.nvim_buf_get_name(buff)
+        if abs_path:match 'pi%-editor' then
+          return {
+            bar.dropbar_symbol_t:new {
+              icon = '󰚩 ',
+              icon_hl = 'Special',
+              name = ' pi prompt',
+              name_hl = 'FileName',
+            },
+            bar.dropbar_symbol_t:new {
+              icon = ' ',
+              icon_hl = 'FilePath',
+              name = get_vi_mode_label(),
+              name_hl = 'FilePath',
+            },
+          }
+        end
+
         local cwd = vim.fn.getcwd()
         local rel_path = vim.fs.relpath(cwd, abs_path)
 
@@ -264,5 +307,17 @@ return {
         end,
       },
     }
+
+    vim.api.nvim_create_autocmd('ModeChanged', {
+      group = vim.api.nvim_create_augroup('dropbar-pi-mode', { clear = true }),
+      callback = function()
+        local buf = vim.api.nvim_get_current_buf()
+        local name = vim.api.nvim_buf_get_name(buf)
+
+        if name:match 'pi%-editor' then
+          vim.cmd.redrawstatus()
+        end
+      end,
+    })
   end,
 }
