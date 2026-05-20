@@ -17,6 +17,7 @@ return {
         'c',
         'css',
         'diff',
+        'gitignore',
         'glsl',
         'html',
         'json5',

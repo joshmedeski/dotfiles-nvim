@@ -8,6 +8,12 @@
 See `:help lua-guide-autocommands`
 --]]
 
+vim.filetype.add {
+  filename = {
+    ['.gitignorefiles'] = 'gitignore',
+  },
+}
+
 vim.api.nvim_create_augroup('HelpSplitRight', { clear = true })
 vim.api.nvim_create_autocmd('BufWinEnter', {
   group = 'HelpSplitRight',
