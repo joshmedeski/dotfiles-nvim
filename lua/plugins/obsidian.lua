@@ -21,6 +21,8 @@ return {
 
     legacy_commands = false,
 
+    disable_frontmatter = true,
+
     daily_notes = {
       folder = 'Days',
     },
