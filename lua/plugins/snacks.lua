@@ -58,6 +58,13 @@ return {
   },
   keys = {
     {
+      '<C-w>m',
+      function()
+        Snacks.zen.zoom()
+      end,
+      desc = 'Toggle window zoom',
+    },
+    {
       '<leader>H',
       function()
         Snacks.dashboard.open()
