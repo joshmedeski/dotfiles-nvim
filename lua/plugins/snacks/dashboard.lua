@@ -65,6 +65,69 @@ local function git_context()
   return root, branch:gsub('%s+$', '')
 end
 
+-- Render a status as an inverted "chip": the word in a filled pill with
+-- half-circle end caps (Nerd Font U+E0B6 / U+E0B4). The label is auto-contrasted
+-- onto the fill color and the caps paint the fill on a transparent cell so the
+-- rounded ends blend with the terminal background. Each chip is drawn in a named
+-- "tone"; tone colors come from the active theme's Diagnostic*/Special/Comment
+-- groups and are refreshed on ColorScheme so they follow dark/light switches.
+local CHIP_LEFT = '\238\130\182' -- U+E0B6 left half circle
+local CHIP_RIGHT = '\238\130\180' -- U+E0B4 right half circle
+local chip_tone_src = {
+  gray = 'Comment',
+  green = 'DiagnosticOk',
+  red = 'DiagnosticError',
+  accent = 'Special',
+}
+
+-- Pick black or white for the pill label based on the fill's luminance (YIQ),
+-- so the chip stays readable on both light and dark tone colors. Can't invert
+-- to Normal.bg here: with transparent_background it's nil.
+local function readable_fg(rgb)
+  local r, g, b = math.floor(rgb / 65536) % 256, math.floor(rgb / 256) % 256, rgb % 256
+  return (r * 299 + g * 587 + b * 114) / 1000 > 140 and 0x000000 or 0xffffff
+end
+
+local function setup_chip_hls()
+  for tone, src in pairs(chip_tone_src) do
+    local color = vim.api.nvim_get_hl(0, { name = src, link = false }).fg
+    if color then
+      vim.api.nvim_set_hl(0, 'DashboardChip_' .. tone, { fg = readable_fg(color), bg = color, bold = true })
+      vim.api.nvim_set_hl(0, 'DashboardChip_' .. tone .. '_cap', { fg = color })
+    end
+  end
+end
+
+vim.api.nvim_create_autocmd('ColorScheme', {
+  group = vim.api.nvim_create_augroup('dashboard_chip_hl', { clear = true }),
+  callback = setup_chip_hls,
+})
+pcall(setup_chip_hls)
+
+-- Build the chip chunks for a label in the given tone (falling back to accent).
+local function chip(label, tone)
+  tone = chip_tone_src[tone] and tone or 'accent'
+  return {
+    { CHIP_LEFT, hl = 'DashboardChip_' .. tone .. '_cap' },
+    { (' %s '):format(label), hl = 'DashboardChip_' .. tone },
+    { CHIP_RIGHT, hl = 'DashboardChip_' .. tone .. '_cap' },
+  }
+end
+
+-- Issue/PR state → chip word + tone.
+local state_chip_spec = {
+  OPEN = { 'OPEN', 'green' },
+  CLOSED = { 'CLOSED', 'red' },
+  MERGED = { 'MERGED', 'accent' },
+}
+local function state_chip(state)
+  local spec = state_chip_spec[state]
+  if spec then
+    return chip(spec[1], spec[2])
+  end
+  return chip(state or '?', 'gray')
+end
+
 ---@return snacks.dashboard.Section?
 local function get_issue_title()
   local root, branch = git_context()
@@ -81,13 +144,15 @@ local function get_issue_title()
   if not entry or not entry.value then
     return
   end
+  local state, title = entry.value:match '^(%u+)\t(.*)$'
+  if not state then
+    return
+  end
 
-  return {
-    text = { { ('Issue #%s '):format(number), hl = 'Special' }, { entry.value, hl = 'Title' } },
-    width = 2000,
-    align = 'center',
-    padding = 1,
-  }
+  local text = state_chip(state)
+  table.insert(text, { (' Issue #%s '):format(number), hl = 'Special' })
+  table.insert(text, { title, hl = 'Title' })
+  return { text = text, width = 2000, align = 'center', padding = 1 }
 end
 
 ---@return snacks.dashboard.Section?
@@ -104,17 +169,15 @@ local function get_pr_title()
     return
   end
 
-  local number, title = entry.value:match '^(%d+)\t(.*)$'
+  local number, state, title = entry.value:match '^(%d+)\t(%u+)\t(.*)$'
   if not number then
     return
   end
 
-  return {
-    text = { { ('PR #%s '):format(number), hl = 'Special' }, { title, hl = 'Title' } },
-    width = 2000,
-    align = 'center',
-    padding = 1,
-  }
+  local text = state_chip(state)
+  table.insert(text, { (' PR #%s '):format(number), hl = 'Special' })
+  table.insert(text, { title, hl = 'Title' })
+  return { text = text, width = 2000, align = 'center', padding = 1 }
 end
 
 -- In-flight gh keys, so a re-render (or a rapid dashboard reopen) never spawns a
@@ -158,29 +221,40 @@ local function prime_titles()
   local cache = load_issue_title_cache()
   local now = os.time()
 
-  local function is_stale(key)
+  -- Refetch when missing, expired, an older schema (no value field), or a
+  -- cached string that no longer matches the expected shape (so adding the
+  -- state field auto-migrates stale entries instead of waiting out the TTL). A
+  -- `false` miss is kept until the TTL lapses.
+  local function needs_fetch(key, shape)
     local e = cache[key]
-    return not e or e.value == nil or (now - e.fetched_at) > issue_title_ttl
+    if not e or e.value == nil then
+      return true
+    end
+    if type(e.value) == 'string' and not e.value:match(shape) then
+      return true
+    end
+    return (now - e.fetched_at) > issue_title_ttl
   end
 
   local number = branch:match '(%d+)'
   if number then
     local key = root .. '#' .. branch
-    if is_stale(key) then
-      refresh_title(key, { 'gh', 'issue', 'view', number, '--json', 'title', '-q', '.title' }, function(code, output)
-        return (code ~= 0 or output == '') and false or output
+    if needs_fetch(key, '^%u+\t') then
+      refresh_title(key, { 'gh', 'issue', 'view', number, '--json', 'state,title', '-q', '"\\(.state)\t\\(.title)"' }, function(code, output)
+        -- Expect "<STATE><TAB>title"; reject anything else as a miss.
+        return (code ~= 0 or not output:match '^%u+\t') and false or output
       end)
     end
   end
 
   local pr_key = 'pr:' .. root .. '#' .. branch
-  if is_stale(pr_key) then
+  if needs_fetch(pr_key, '^%d+\t%u+\t') then
     -- gh resolves the PR from the current branch directly. Use jq interpolation
-    -- ("number\ttitle"); '+' fails because gh's jq can't add a number to a string.
-    refresh_title(pr_key, { 'gh', 'pr', 'view', '--json', 'number,title', '-q', '"\\(.number)\t\\(.title)"' }, function(code, output)
-      -- Reject anything not shaped like "<digits><TAB>...": gh writes jq errors
-      -- to stdout and still exits 0, which would otherwise poison the cache.
-      return (code ~= 0 or not output:match '^%d+\t') and false or output
+    -- ("number\tstate\ttitle"); '+' fails because gh's jq can't add a number to a string.
+    refresh_title(pr_key, { 'gh', 'pr', 'view', '--json', 'number,state,title', '-q', '"\\(.number)\t\\(.state)\t\\(.title)"' }, function(code, output)
+      -- Reject anything not shaped like "<digits><TAB><STATE><TAB>...": gh writes
+      -- jq errors to stdout and still exits 0, which would otherwise poison the cache.
+      return (code ~= 0 or not output:match '^%d+\t%u+\t') and false or output
     end)
   end
 end
