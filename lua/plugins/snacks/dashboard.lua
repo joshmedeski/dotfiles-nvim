@@ -315,6 +315,84 @@ local function prime_titles()
   end
 end
 
+-- Recent Claude Code conversations, newest first. Each entry is
+-- { id = <session uuid>, cwd = <project dir>, title = <aiTitle> }. Populated
+-- asynchronously by prime_recent_convos(); the section function only reads it.
+local recent_convos = {}
+
+-- Gather the 5 most recent conversations across every project. Claude Code
+-- stores one .jsonl per session under ~/.claude/projects/<encoded-cwd>/, so
+-- file mtime is recency. For each we pull the project cwd and the latest
+-- aiTitle, skipping sessions whose cwd no longer exists on disk. Over-scans the
+-- newest 40 candidates so skipped (deleted) projects don't starve the list.
+-- Emits "<id>\t<cwd>\t<title>" lines; runs off the render path via vim.system.
+local recent_convos_cmd = [[
+n=0
+for f in $(ls -t "$HOME"/.claude/projects/*/*.jsonl 2>/dev/null | head -40); do
+  [ "$n" -ge 5 ] && break
+  out=$(jq -rs '(map(select(.type=="ai-title").aiTitle)|last) as $t | (map(.cwd)|map(select(.!=null))|first) as $c | "\($c // "")\t\($t // "")"' "$f" 2>/dev/null)
+  cwd=$(printf '%s' "$out" | cut -f1)
+  title=$(printf '%s' "$out" | cut -f2-)
+  [ -z "$cwd" ] && continue
+  [ -d "$cwd" ] || continue
+  printf '%s\t%s\t%s\n' "$(basename "$f" .jsonl)" "$cwd" "$title"
+  n=$((n+1))
+done
+]]
+
+-- Don't respawn the gather while one is already in flight (rapid reopens).
+local recent_convos_inflight = false
+
+-- Refresh the recent-conversations list off the main thread, then re-render.
+-- Like prime_titles, this runs after the dashboard has painted so the jq/file
+-- scanning never blocks the initial open.
+local function prime_recent_convos()
+  if recent_convos_inflight then
+    return
+  end
+  recent_convos_inflight = true
+  vim.system({ 'bash', '-c', recent_convos_cmd }, { text = true }, function(res)
+    vim.schedule(function()
+      recent_convos_inflight = false
+      if res.code ~= 0 then
+        return
+      end
+      local list = {}
+      for line in vim.gsplit(res.stdout or '', '\n', { plain = true }) do
+        local id, cwd, title = line:match '^([^\t]+)\t([^\t]+)\t(.*)$'
+        if id and cwd then
+          list[#list + 1] = { id = id, cwd = cwd, title = title }
+        end
+      end
+      recent_convos = list
+      Snacks.dashboard.update()
+    end)
+  end)
+end
+
+---@return snacks.dashboard.Section?
+local function get_recent_conversations()
+  if #recent_convos == 0 then
+    return
+  end
+  -- Title + child rows; snacks prepends the title header only when rows exist.
+  local section = { icon = '💬', title = 'Recent Conversations', indent = 2, padding = 1 }
+  for _, c in ipairs(recent_convos) do
+    local folder = vim.fn.fnamemodify(c.cwd, ':t')
+    local label = c.title ~= '' and (folder .. ' — ' .. c.title) or folder
+    -- Trim by display columns (not bytes) so the em dash / title text never
+    -- overflows the dashboard box or gets sliced mid-character.
+    if vim.fn.strdisplaywidth(label) > 44 then
+      label = vim.fn.strcharpart(label, 0, 43) .. '…'
+    end
+    -- Resume in a horizontal tmux split cd'd into the conversation's own
+    -- project dir, so the session reopens with the right context.
+    local action = (':silent !tmux split-window -h -c %s claude --resume %s'):format(vim.fn.shellescape(c.cwd), c.id)
+    section[#section + 1] = { icon = '💬', desc = label, action = action, autokey = true }
+  end
+  return section
+end
+
 -- Turn raw figlet output into per-character rainbow-highlighted chunks.
 local function build_header_text(figlet)
   local rainbow = { 'Rainbow1', 'Rainbow2', 'Rainbow3', 'Rainbow4', 'Rainbow5', 'Rainbow6' }
@@ -377,6 +455,7 @@ vim.api.nvim_create_autocmd('User', {
   callback = function()
     prime_header()
     prime_titles()
+    prime_recent_convos()
   end,
 })
 
@@ -467,8 +546,9 @@ return {
     get_pr_title,
     -- get_unstaged_changes,
     { icon = '🤖', key = 'c', desc = 'Claude Code', action = ':ClaudeCode' },
-    { icon = '🤖', key = 'a', desc = 'AI (pi)', action = ':silent !tmux split-window -h pi' },
+    { icon = '🥧', key = 'a', desc = 'AI (pi)', action = ':silent !tmux split-window -h pi' },
     { icon = '⏳', title = 'Recent Files', section = 'recent_files', cwd = true, indent = 2, padding = 1 },
+    get_recent_conversations,
     { icon = '📑', key = 'f', desc = 'Files', action = ':GoToFile' },
     { icon = '🔎', key = '/', desc = 'Find Text', action = ':Grep' },
     { icon = '🐙', key = 'i', desc = 'Issue', action = view_branch_issue },
