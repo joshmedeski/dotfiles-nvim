@@ -1,52 +1,32 @@
+-- The header (a rainbow figlet banner of the tmux session or cwd name) is
+-- rendered lazily so it never blocks the dashboard paint. get_header() returns
+-- the cached banner instantly, or a plain placeholder (cwd basename, no
+-- subprocess) on the very first open. prime_header() shells out to tmux/figlet
+-- asynchronously off the render path and swaps the banner in via
+-- Snacks.dashboard.update(). Cached per session name, so reopens are instant
+-- and only a changed name triggers a rebuild.
+local header_cache = nil
+
 ---@return snacks.dashboard.Section
 local function get_header()
-  local name = vim.fn.system 'tmux display-message -p "#S"'
-  if vim.v.shell_error ~= 0 or name:match '^%s*$' then
-    name = vim.fn.fnamemodify(vim.fn.getcwd(), ':t')
-  else
-    name = name:gsub('%s+$', '')
-  end
-
-  local section = { width = 2000, align = 'center', padding = 1 }
-
-  local font_dir = vim.fn.system('figlet -I 2'):gsub('%s+$', '')
-  if vim.v.shell_error ~= 0 then
-    section.text = name
-    return section
-  end
-  local fonts = vim.fn.globpath(font_dir, '*.flf', false, true)
-  if #fonts == 0 then
-    section.text = name
-    return section
-  end
-  math.randomseed(os.time())
-  local font = fonts[math.random(#fonts)]
-
-  local figlet = vim.fn.system { 'figlet', '-w', '1000', '-f', font, name }
-  if vim.v.shell_error ~= 0 then
-    section.text = name
-    return section
-  end
-
-  local rainbow = { 'Rainbow1', 'Rainbow2', 'Rainbow3', 'Rainbow4', 'Rainbow5', 'Rainbow6' }
-  local result = {}
-  local color_idx = 1
-  for char in figlet:gmatch '.' do
-    if char:match '%S' then
-      table.insert(result, { char, hl = rainbow[color_idx] })
-      color_idx = color_idx % #rainbow + 1
-    else
-      table.insert(result, { char })
-    end
-  end
-  section.text = result
-  return section
+  local text = header_cache and header_cache.text or vim.fn.fnamemodify(vim.fn.getcwd(), ':t')
+  return { width = 2000, align = 'center', padding = 1, text = text }
 end
 
--- Cache issue titles (keyed by "repo_root#branch") so the slow, blocking gh
--- call only runs once per branch. Backed by a single on-disk JSON file that
--- survives restarts; entries expire after issue_title_ttl seconds. The
--- in-memory table is the hot layer loaded lazily from disk on first use.
+-- Cache issue/PR titles (keyed by "repo_root#branch", PR entries prefixed with
+-- "pr:") so the slow gh calls only run once per branch. Backed by a single
+-- on-disk JSON file that survives restarts; entries expire after
+-- issue_title_ttl seconds. The in-memory table is the hot layer loaded lazily
+-- from disk on first use.
+--
+-- The gh calls never run on the dashboard render path. The section functions
+-- below only READ the cache (instant, non-blocking); prime_titles() does the
+-- fetching asynchronously after the dashboard opens (see the autocmd near the
+-- bottom of this file) and re-renders via Snacks.dashboard.update() once a
+-- value actually changes. So a cold open shows nothing for these lines, then
+-- they pop in when gh returns; a warm open renders the cached value
+-- immediately, and a stale value is shown right away then quietly replaced in
+-- the background.
 local issue_title_cache = nil
 local issue_title_ttl = 24 * 60 * 60 -- 24h
 local issue_title_cache_file = vim.fs.joinpath(vim.fn.stdpath 'cache', 'dashboard_issue_titles.json')
@@ -70,43 +50,40 @@ local function save_issue_title_cache()
   pcall(vim.fn.writefile, { vim.json.encode(issue_title_cache) }, issue_title_cache_file)
 end
 
----@return snacks.dashboard.Section?
-local function get_issue_title()
+-- Resolve repo root and current branch (cheap, local git). Returns nil when not
+-- in a git repo so callers can bail out.
+local function git_context()
   local root = Snacks.git.get_root()
   if not root then
     return
   end
-
-  local branch = vim.fn.system 'git rev-parse --abbrev-ref HEAD'
+  -- List form execs git directly, avoiding a (potentially slow) shell spawn.
+  local branch = vim.fn.system { 'git', 'rev-parse', '--abbrev-ref', 'HEAD' }
   if vim.v.shell_error ~= 0 then
     return
   end
-  branch = branch:gsub('%s+$', '')
+  return root, branch:gsub('%s+$', '')
+end
 
+---@return snacks.dashboard.Section?
+local function get_issue_title()
+  local root, branch = git_context()
+  if not root or not branch then
+    return
+  end
   local number = branch:match '(%d+)'
   if not number then
     return
   end
 
-  local cache = load_issue_title_cache()
-  local key = root .. '#' .. branch
-  local entry = cache[key]
-
-  if not entry or (os.time() - entry.fetched_at) > issue_title_ttl then
-    local output = vim.fn.system { 'gh', 'issue', 'view', number, '--json', 'title', '-q', '.title' }
-    -- false remembers a miss so we don't refetch until the TTL lapses
-    local title = (vim.v.shell_error ~= 0 or output:match '^%s*$') and false or output:gsub('%s+$', '')
-    entry = { title = title, fetched_at = os.time() }
-    cache[key] = entry
-    save_issue_title_cache()
-  end
-
-  if not entry.title then
+  -- Read-only: prime_titles() owns fetching. A missing/false value renders nothing.
+  local entry = load_issue_title_cache()[root .. '#' .. branch]
+  if not entry or not entry.value then
     return
   end
 
   return {
-    text = { { ('Issue #%s '):format(number), hl = 'Special' }, { entry.title, hl = 'Title' } },
+    text = { { ('Issue #%s '):format(number), hl = 'Special' }, { entry.value, hl = 'Title' } },
     width = 2000,
     align = 'center',
     padding = 1,
@@ -115,34 +92,15 @@ end
 
 ---@return snacks.dashboard.Section?
 local function get_pr_title()
-  local root = Snacks.git.get_root()
-  if not root then
+  local root, branch = git_context()
+  if not root or not branch then
     return
   end
 
-  local branch = vim.fn.system 'git rev-parse --abbrev-ref HEAD'
-  if vim.v.shell_error ~= 0 then
-    return
-  end
-  branch = branch:gsub('%s+$', '')
-
-  -- Reuse the issue title cache, namespaced with a "pr:" key prefix so issue
-  -- and PR entries share the same on-disk file without colliding.
-  local cache = load_issue_title_cache()
-  local key = 'pr:' .. root .. '#' .. branch
-  local entry = cache[key]
-
-  if not entry or (os.time() - entry.fetched_at) > issue_title_ttl then
-    -- gh resolves the PR from the current branch directly, so no parsing of the
-    -- branch name is needed. false remembers a miss until the TTL lapses.
-    local output = vim.fn.system { 'gh', 'pr', 'view', '--json', 'number,title', '-q', '"\\(.number)\t\\(.title)"' }
-    local value = (vim.v.shell_error ~= 0 or output:match '^%s*$') and false or output:gsub('%s+$', '')
-    entry = { value = value, fetched_at = os.time() }
-    cache[key] = entry
-    save_issue_title_cache()
-  end
-
-  if not entry.value then
+  -- Read-only: prime_titles() owns fetching. PR entries share the cache file
+  -- under a "pr:" key prefix so they don't collide with issue entries.
+  local entry = load_issue_title_cache()['pr:' .. root .. '#' .. branch]
+  if not entry or not entry.value then
     return
   end
 
@@ -159,10 +117,143 @@ local function get_pr_title()
   }
 end
 
+-- In-flight gh keys, so a re-render (or a rapid dashboard reopen) never spawns a
+-- duplicate fetch for a key already being fetched.
+local title_inflight = {}
+
+-- Fetch one title asynchronously and refresh the cache. `validate(code, output)`
+-- returns the string to cache, or false to remember a miss until the TTL lapses.
+-- Only triggers a re-render when the cached value actually changed, avoiding
+-- needless flicker.
+local function refresh_title(key, cmd, validate)
+  if title_inflight[key] then
+    return
+  end
+  title_inflight[key] = true
+  vim.system(cmd, { text = true }, function(res)
+    vim.schedule(function()
+      title_inflight[key] = nil
+      local output = (res.code == 0 and res.stdout or ''):gsub('%s+$', '')
+      local value = validate(res.code, output)
+      local cache = load_issue_title_cache()
+      local prev = cache[key]
+      cache[key] = { value = value, fetched_at = os.time() }
+      save_issue_title_cache()
+      if not prev or prev.value ~= value then
+        Snacks.dashboard.update()
+      end
+    end)
+  end)
+end
+
+-- Refetch issue/PR titles for the current branch when stale or missing. Runs
+-- after the dashboard has already rendered, so the blocking gh network calls
+-- never delay the initial paint. A cached entry with no `value` field is an
+-- older on-disk schema and is treated as missing so it gets refilled.
+local function prime_titles()
+  local root, branch = git_context()
+  if not root or not branch then
+    return
+  end
+  local cache = load_issue_title_cache()
+  local now = os.time()
+
+  local function is_stale(key)
+    local e = cache[key]
+    return not e or e.value == nil or (now - e.fetched_at) > issue_title_ttl
+  end
+
+  local number = branch:match '(%d+)'
+  if number then
+    local key = root .. '#' .. branch
+    if is_stale(key) then
+      refresh_title(key, { 'gh', 'issue', 'view', number, '--json', 'title', '-q', '.title' }, function(code, output)
+        return (code ~= 0 or output == '') and false or output
+      end)
+    end
+  end
+
+  local pr_key = 'pr:' .. root .. '#' .. branch
+  if is_stale(pr_key) then
+    -- gh resolves the PR from the current branch directly. Use jq interpolation
+    -- ("number\ttitle"); '+' fails because gh's jq can't add a number to a string.
+    refresh_title(pr_key, { 'gh', 'pr', 'view', '--json', 'number,title', '-q', '"\\(.number)\t\\(.title)"' }, function(code, output)
+      -- Reject anything not shaped like "<digits><TAB>...": gh writes jq errors
+      -- to stdout and still exits 0, which would otherwise poison the cache.
+      return (code ~= 0 or not output:match '^%d+\t') and false or output
+    end)
+  end
+end
+
+-- Turn raw figlet output into per-character rainbow-highlighted chunks.
+local function build_header_text(figlet)
+  local rainbow = { 'Rainbow1', 'Rainbow2', 'Rainbow3', 'Rainbow4', 'Rainbow5', 'Rainbow6' }
+  local result = {}
+  local color_idx = 1
+  for char in figlet:gmatch '.' do
+    if char:match '%S' then
+      table.insert(result, { char, hl = rainbow[color_idx] })
+      color_idx = color_idx % #rainbow + 1
+    else
+      table.insert(result, { char })
+    end
+  end
+  return result
+end
+
+local function set_header(name, text)
+  header_cache = { name = name, text = text }
+  Snacks.dashboard.update()
+end
+
+-- Build the figlet banner asynchronously (tmux → figlet, all off the render
+-- path) and swap it in. Cached per session name, so a reopen for the same name
+-- is a no-op and never re-renders.
+local function prime_header()
+  vim.system({ 'tmux', 'display-message', '-p', '#S' }, { text = true }, function(nres)
+    vim.schedule(function()
+      local name = (nres.code == 0 and nres.stdout or ''):gsub('%s+$', '')
+      if name == '' then
+        name = vim.fn.fnamemodify(vim.fn.getcwd(), ':t')
+      end
+      if header_cache and header_cache.name == name then
+        return
+      end
+      vim.system({ 'figlet', '-I', '2' }, { text = true }, function(dres)
+        vim.schedule(function()
+          local font_dir = dres.code == 0 and dres.stdout:gsub('%s+$', '') or ''
+          local fonts = font_dir ~= '' and vim.fn.globpath(font_dir, '*.flf', false, true) or {}
+          if #fonts == 0 then
+            return set_header(name, name) -- plain-text fallback
+          end
+          math.randomseed(os.time())
+          local font = fonts[math.random(#fonts)]
+          vim.system({ 'figlet', '-w', '1000', '-f', font, name }, { text = true }, function(gres)
+            vim.schedule(function()
+              set_header(name, gres.code == 0 and build_header_text(gres.stdout) or name)
+            end)
+          end)
+        end)
+      end)
+    end)
+  end)
+end
+
+-- Prime the header and issue/PR titles once per dashboard open (fires after the
+-- initial render), and never on the re-renders the primers themselves trigger.
+vim.api.nvim_create_autocmd('User', {
+  pattern = 'SnacksDashboardOpened',
+  group = vim.api.nvim_create_augroup('dashboard_async_primer', { clear = true }),
+  callback = function()
+    prime_header()
+    prime_titles()
+  end,
+})
+
 -- Open Octo in a vertical split viewing the issue whose number is parsed from
 -- the checked-out branch (e.g. "123-fix-thing" → issue #123).
 local function view_branch_issue()
-  local branch = vim.fn.system 'git rev-parse --abbrev-ref HEAD'
+  local branch = vim.fn.system { 'git', 'rev-parse', '--abbrev-ref', 'HEAD' }
   if vim.v.shell_error ~= 0 then
     return vim.notify('Not in a git repository', vim.log.levels.WARN)
   end
