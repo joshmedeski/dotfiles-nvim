@@ -9,6 +9,9 @@ See `:help lua-guide-autocommands`
 --]]
 
 vim.filetype.add {
+  extension = {
+    plist = 'plist',
+  },
   filename = {
     ['.gitignorefiles'] = 'gitignore',
   },
@@ -59,6 +62,13 @@ vim.api.nvim_create_autocmd({ 'BufNewFile', 'BufFilePre', 'BufRead' }, {
     vim.cmd [[set filetype=markdown wrap linebreak nolist nospell]]
   end,
 })
+
+vim.cmd [[
+  augroup MarkdownHeadingJumps
+    autocmd!
+    autocmd FileType markdown nnoremap <buffer> ]h j/\v^#{1,6}\s<CR>zt
+  augroup END
+]]
 
 vim.api.nvim_create_autocmd({ 'BufRead' }, {
   pattern = { 'gitcommit' },
