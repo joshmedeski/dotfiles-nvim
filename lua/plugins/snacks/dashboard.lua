@@ -106,7 +106,53 @@ local function get_issue_title()
   end
 
   return {
-    text = { { ('#%s '):format(number), hl = 'Special' }, { entry.title, hl = 'Title' } },
+    text = { { ('Issue #%s '):format(number), hl = 'Special' }, { entry.title, hl = 'Title' } },
+    width = 2000,
+    align = 'center',
+    padding = 1,
+  }
+end
+
+---@return snacks.dashboard.Section?
+local function get_pr_title()
+  local root = Snacks.git.get_root()
+  if not root then
+    return
+  end
+
+  local branch = vim.fn.system 'git rev-parse --abbrev-ref HEAD'
+  if vim.v.shell_error ~= 0 then
+    return
+  end
+  branch = branch:gsub('%s+$', '')
+
+  -- Reuse the issue title cache, namespaced with a "pr:" key prefix so issue
+  -- and PR entries share the same on-disk file without colliding.
+  local cache = load_issue_title_cache()
+  local key = 'pr:' .. root .. '#' .. branch
+  local entry = cache[key]
+
+  if not entry or (os.time() - entry.fetched_at) > issue_title_ttl then
+    -- gh resolves the PR from the current branch directly, so no parsing of the
+    -- branch name is needed. false remembers a miss until the TTL lapses.
+    local output = vim.fn.system { 'gh', 'pr', 'view', '--json', 'number,title', '-q', '"\\(.number)\t\\(.title)"' }
+    local value = (vim.v.shell_error ~= 0 or output:match '^%s*$') and false or output:gsub('%s+$', '')
+    entry = { value = value, fetched_at = os.time() }
+    cache[key] = entry
+    save_issue_title_cache()
+  end
+
+  if not entry.value then
+    return
+  end
+
+  local number, title = entry.value:match '^(%d+)\t(.*)$'
+  if not number then
+    return
+  end
+
+  return {
+    text = { { ('PR #%s '):format(number), hl = 'Special' }, { title, hl = 'Title' } },
     width = 2000,
     align = 'center',
     padding = 1,
@@ -197,6 +243,7 @@ return {
   sections = {
     get_header,
     get_issue_title,
+    get_pr_title,
     -- get_unstaged_changes,
     { icon = '⏳', title = 'Recent Files', section = 'recent_files', cwd = true, indent = 2, padding = 1 },
     { icon = '📑', key = 'f', desc = 'Files', action = ':GoToFile' },
