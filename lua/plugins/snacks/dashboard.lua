@@ -43,13 +43,37 @@ local function get_header()
   return section
 end
 
--- Cache issue titles per branch so the (slow, blocking) gh call only runs
--- once per branch per Neovim session.
-local issue_title_cache = {}
+-- Cache issue titles (keyed by "repo_root#branch") so the slow, blocking gh
+-- call only runs once per branch. Backed by a single on-disk JSON file that
+-- survives restarts; entries expire after issue_title_ttl seconds. The
+-- in-memory table is the hot layer loaded lazily from disk on first use.
+local issue_title_cache = nil
+local issue_title_ttl = 24 * 60 * 60 -- 24h
+local issue_title_cache_file = vim.fs.joinpath(vim.fn.stdpath 'cache', 'dashboard_issue_titles.json')
+
+local function load_issue_title_cache()
+  if issue_title_cache then
+    return issue_title_cache
+  end
+  issue_title_cache = {}
+  local ok, lines = pcall(vim.fn.readfile, issue_title_cache_file)
+  if ok and #lines > 0 then
+    local decoded_ok, decoded = pcall(vim.json.decode, table.concat(lines, '\n'))
+    if decoded_ok and type(decoded) == 'table' then
+      issue_title_cache = decoded
+    end
+  end
+  return issue_title_cache
+end
+
+local function save_issue_title_cache()
+  pcall(vim.fn.writefile, { vim.json.encode(issue_title_cache) }, issue_title_cache_file)
+end
 
 ---@return snacks.dashboard.Section?
 local function get_issue_title()
-  if not Snacks.git.get_root() then
+  local root = Snacks.git.get_root()
+  if not root then
     return
   end
 
@@ -64,22 +88,25 @@ local function get_issue_title()
     return
   end
 
-  local title = issue_title_cache[branch]
-  if title == nil then
-    title = vim.fn.system { 'gh', 'issue', 'view', number, '--json', 'title', '-q', '.title' }
-    if vim.v.shell_error ~= 0 or title:match '^%s*$' then
-      issue_title_cache[branch] = false -- remember the miss, don't refetch
-      return
-    end
-    title = title:gsub('%s+$', '')
-    issue_title_cache[branch] = title
+  local cache = load_issue_title_cache()
+  local key = root .. '#' .. branch
+  local entry = cache[key]
+
+  if not entry or (os.time() - entry.fetched_at) > issue_title_ttl then
+    local output = vim.fn.system { 'gh', 'issue', 'view', number, '--json', 'title', '-q', '.title' }
+    -- false remembers a miss so we don't refetch until the TTL lapses
+    local title = (vim.v.shell_error ~= 0 or output:match '^%s*$') and false or output:gsub('%s+$', '')
+    entry = { title = title, fetched_at = os.time() }
+    cache[key] = entry
+    save_issue_title_cache()
   end
-  if not title then
+
+  if not entry.title then
     return
   end
 
   return {
-    text = { { ('#%s '):format(number), hl = 'Special' }, { title, hl = 'Title' } },
+    text = { { ('#%s '):format(number), hl = 'Special' }, { entry.title, hl = 'Title' } },
     width = 2000,
     align = 'center',
     padding = 1,
