@@ -187,15 +187,14 @@ local function get_issue_title()
     return
   end
 
-  -- Line 1: chips (state, optional project, "Issue #N"). Line 2: the title.
+  -- Line 1: the title (default fg). Line 2: chips (state, optional project, "Issue #N").
   local chips = { state_chip(state) }
   if project ~= '' then
     table.insert(chips, chip(project, project_tone(project)))
   end
   table.insert(chips, chip(('Issue #%s'):format(number), 'gray'))
-  local text = chip_row(chips)
-  table.insert(text, { '\n' })
-  table.insert(text, { title, hl = 'Title' })
+  local text = { { title, hl = 'Normal' }, { '\n' } }
+  vim.list_extend(text, chip_row(chips))
   return { text = text, width = 2000, align = 'center', padding = 1 }
 end
 
@@ -218,10 +217,9 @@ local function get_pr_title()
     return
   end
 
-  -- Line 1: chips (state, "PR #N"). Line 2 (after the newline chunk): the title.
-  local text = chip_row { state_chip(state), chip(('PR #%s'):format(number), 'gray', true) }
-  table.insert(text, { '\n' })
-  table.insert(text, { title, hl = 'Title' })
+  -- Line 1: the title (default fg). Line 2: chips (state, "PR #N").
+  local text = { { title, hl = 'Normal' }, { '\n' } }
+  vim.list_extend(text, chip_row { state_chip(state), chip(('PR #%s'):format(number), 'gray', true) })
   return { text = text, width = 2000, align = 'center', padding = 1 }
 end
 
