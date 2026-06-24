@@ -77,6 +77,8 @@ local chip_tone_src = {
   gray = 'Comment',
   green = 'DiagnosticOk',
   red = 'DiagnosticError',
+  yellow = 'DiagnosticWarn',
+  blue = 'DiagnosticInfo',
   accent = 'Special',
 }
 
@@ -130,6 +132,21 @@ local function state_chip(state)
   return chip(state or '?', 'gray')
 end
 
+-- Map a GitHub Projects status name (free-form, e.g. "In Progress") to a tone.
+local function project_tone(status)
+  local s = status:lower()
+  if s:find 'progress' then
+    return 'yellow'
+  elseif s:find 'review' then
+    return 'blue'
+  elseif s:find 'done' or s:find 'complete' then
+    return 'green'
+  elseif s:find 'todo' or s:find 'backlog' or s:find 'triage' then
+    return 'gray'
+  end
+  return 'accent'
+end
+
 ---@return snacks.dashboard.Section?
 local function get_issue_title()
   local root, branch = git_context()
@@ -146,12 +163,16 @@ local function get_issue_title()
   if not entry or not entry.value then
     return
   end
-  local state, title = entry.value:match '^(%u+)\t(.*)$'
+  -- "<STATE>\t<project status>\t<title>"; the project status may be empty.
+  local state, project, title = entry.value:match '^(%u+)\t([^\t]*)\t(.*)$'
   if not state then
     return
   end
 
   local text = state_chip(state)
+  if project ~= '' then
+    vim.list_extend(text, chip(project, project_tone(project)))
+  end
   table.insert(text, { (' Issue #%s '):format(number), hl = 'Special' })
   table.insert(text, { title, hl = 'Title' })
   return { text = text, width = 2000, align = 'center', padding = 1 }
@@ -241,11 +262,17 @@ local function prime_titles()
   local number = branch:match '(%d+)'
   if number then
     local key = root .. '#' .. branch
-    if needs_fetch(key, '^%u+\t') then
-      refresh_title(key, { 'gh', 'issue', 'view', number, '--json', 'state,title', '-q', '"\\(.state)\t\\(.title)"' }, function(code, output)
-        -- Expect "<STATE><TAB>title"; reject anything else as a miss.
-        return (code ~= 0 or not output:match '^%u+\t') and false or output
-      end)
+    if needs_fetch(key, '^%u+\t[^\t]*\t') then
+      -- Also pull the issue's GitHub Projects status (first project item; empty
+      -- when the issue is in no project). // "" keeps jq null-safe.
+      refresh_title(
+        key,
+        { 'gh', 'issue', 'view', number, '--json', 'state,title,projectItems', '-q', '"\\(.state)\t\\(.projectItems[0].status.name // "")\t\\(.title)"' },
+        function(code, output)
+          -- Expect "<STATE><TAB><project><TAB>title"; reject anything else as a miss.
+          return (code ~= 0 or not output:match '^%u+\t[^\t]*\t') and false or output
+        end
+      )
     end
   end
 
