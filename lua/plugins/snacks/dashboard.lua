@@ -169,11 +169,13 @@ local function get_issue_title()
     return
   end
 
+  -- Line 1: chips + "Issue #N". Line 2 (after the newline chunk): the title.
   local text = state_chip(state)
   if project ~= '' then
     vim.list_extend(text, chip(project, project_tone(project)))
   end
-  table.insert(text, { (' Issue #%s '):format(number), hl = 'Special' })
+  table.insert(text, { (' Issue #%s'):format(number), hl = 'Special' })
+  table.insert(text, { '\n' })
   table.insert(text, { title, hl = 'Title' })
   return { text = text, width = 2000, align = 'center', padding = 1 }
 end
@@ -197,8 +199,10 @@ local function get_pr_title()
     return
   end
 
+  -- Line 1: chip + "PR #N". Line 2 (after the newline chunk): the title.
   local text = state_chip(state)
-  table.insert(text, { (' PR #%s '):format(number), hl = 'Special' })
+  table.insert(text, { (' PR #%s'):format(number), hl = 'Special' })
+  table.insert(text, { '\n' })
   table.insert(text, { title, hl = 'Title' })
   return { text = text, width = 2000, align = 'center', padding = 1 }
 end
