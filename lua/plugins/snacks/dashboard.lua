@@ -113,6 +113,42 @@ local function get_issue_title()
   }
 end
 
+-- Open Octo in a vertical split viewing the issue whose number is parsed from
+-- the checked-out branch (e.g. "123-fix-thing" → issue #123).
+local function view_branch_issue()
+  local branch = vim.fn.system 'git rev-parse --abbrev-ref HEAD'
+  if vim.v.shell_error ~= 0 then
+    return vim.notify('Not in a git repository', vim.log.levels.WARN)
+  end
+  branch = branch:gsub('%s+$', '')
+
+  local number = branch:match '(%d+)'
+  if not number then
+    return vim.notify(('No issue number found in branch "%s"'):format(branch), vim.log.levels.WARN)
+  end
+
+  vim.cmd 'vsplit'
+  vim.cmd('Octo issue edit ' .. number)
+end
+
+-- Open Octo in a vertical split viewing the pull request associated with the
+-- checked-out branch. gh resolves the PR from the current branch directly, so
+-- no parsing is needed; exits with a notice when the branch has no PR.
+local function view_branch_pr()
+  if not Snacks.git.get_root() then
+    return vim.notify('Not in a git repository', vim.log.levels.WARN)
+  end
+
+  local number = vim.fn.system { 'gh', 'pr', 'view', '--json', 'number', '-q', '.number' }
+  if vim.v.shell_error ~= 0 or number:match '^%s*$' then
+    return vim.notify('No pull request found for the current branch', vim.log.levels.WARN)
+  end
+  number = number:gsub('%s+$', '')
+
+  vim.cmd 'vsplit'
+  vim.cmd('Octo pr edit ' .. number)
+end
+
 ---@return snacks.dashboard.Section?
 local function get_unstaged_changes()
   if not Snacks.git.get_root() then
@@ -141,15 +177,33 @@ return {
   col = nil, -- dashboard position. nil for center
   pane_gap = 4, -- empty columns between vertical panes
   autokeys = 'jklhfdsa123456789', -- autokey sequence
-  formats = {},
+  formats = {
+    -- Show recent files relative to Neovim's cwd (`:.`) instead of home (`:~`).
+    file = function(item, ctx)
+      local fname = vim.fn.fnamemodify(item.file, ':.')
+      fname = ctx.width and #fname > ctx.width and vim.fn.pathshorten(fname) or fname
+      if #fname > ctx.width then
+        local dir = vim.fn.fnamemodify(fname, ':h')
+        local file = vim.fn.fnamemodify(fname, ':t')
+        if dir and file then
+          file = file:sub(-(ctx.width - #dir - 2))
+          fname = dir .. '/…' .. file
+        end
+      end
+      local dir, file = fname:match '^(.*)/(.+)$'
+      return dir and { { dir .. '/', hl = 'dir' }, { file, hl = 'file' } } or { { fname, hl = 'file' } }
+    end,
+  },
   sections = {
     get_header,
     get_issue_title,
     -- get_unstaged_changes,
     { icon = '⏳', title = 'Recent Files', section = 'recent_files', cwd = true, indent = 2, padding = 1 },
     { icon = '📑', key = 'f', desc = 'Files', action = ':GoToFile' },
+    { icon = '🐙', key = 'i', desc = 'View Issue (branch)', action = view_branch_issue },
+    { icon = '🔀', key = 'p', desc = 'View PR (branch)', action = view_branch_pr },
     { icon = '🤖', key = 'c', desc = 'Claude Code', action = ':ClaudeCode' },
-    { icon = '🤖', key = 'p', desc = 'Pi (tmux split)', action = ':silent !tmux split-window -h pi' },
+    { icon = '🤖', key = 'a', desc = 'AI (pi)', action = ':silent !tmux split-window -h pi' },
     { icon = '📝', key = 'P', desc = 'Claude Code (Plan)', action = ':ClaudeCode --permission-mode plan' },
     { icon = '⏩︎', key = 'r', desc = 'Claude Code (Resume)', action = ':ClaudeCode --resume' },
     { icon = '⏭️', key = 'C', desc = 'Claude Code (Continue)', action = ':ClaudeCode --continue' },
