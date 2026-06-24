@@ -43,6 +43,49 @@ local function get_header()
   return section
 end
 
+-- Cache issue titles per branch so the (slow, blocking) gh call only runs
+-- once per branch per Neovim session.
+local issue_title_cache = {}
+
+---@return snacks.dashboard.Section?
+local function get_issue_title()
+  if not Snacks.git.get_root() then
+    return
+  end
+
+  local branch = vim.fn.system 'git rev-parse --abbrev-ref HEAD'
+  if vim.v.shell_error ~= 0 then
+    return
+  end
+  branch = branch:gsub('%s+$', '')
+
+  local number = branch:match '(%d+)'
+  if not number then
+    return
+  end
+
+  local title = issue_title_cache[branch]
+  if title == nil then
+    title = vim.fn.system { 'gh', 'issue', 'view', number, '--json', 'title', '-q', '.title' }
+    if vim.v.shell_error ~= 0 or title:match '^%s*$' then
+      issue_title_cache[branch] = false -- remember the miss, don't refetch
+      return
+    end
+    title = title:gsub('%s+$', '')
+    issue_title_cache[branch] = title
+  end
+  if not title then
+    return
+  end
+
+  return {
+    text = { { ('#%s '):format(number), hl = 'Special' }, { title, hl = 'Title' } },
+    width = 2000,
+    align = 'center',
+    padding = 1,
+  }
+end
+
 ---@return snacks.dashboard.Section?
 local function get_unstaged_changes()
   if not Snacks.git.get_root() then
@@ -74,6 +117,7 @@ return {
   formats = {},
   sections = {
     get_header,
+    get_issue_title,
     -- get_unstaged_changes,
     { icon = '⏳', title = 'Recent Files', section = 'recent_files', cwd = true, indent = 2, padding = 1 },
     { icon = '📑', key = 'f', desc = 'Files', action = ':GoToFile' },
