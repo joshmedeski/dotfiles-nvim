@@ -114,11 +114,13 @@ local function chip(label, tone)
   }
 end
 
--- Issue/PR state → chip word + tone.
+-- Issue/PR state → chip word + tone. Draft PRs report state OPEN but are
+-- collapsed to DRAFT upstream.
 local state_chip_spec = {
   OPEN = { 'OPEN', 'green' },
   CLOSED = { 'CLOSED', 'red' },
   MERGED = { 'MERGED', 'accent' },
+  DRAFT = { 'DRAFT', 'gray' },
 }
 local function state_chip(state)
   local spec = state_chip_spec[state]
@@ -250,12 +252,17 @@ local function prime_titles()
   local pr_key = 'pr:' .. root .. '#' .. branch
   if needs_fetch(pr_key, '^%d+\t%u+\t') then
     -- gh resolves the PR from the current branch directly. Use jq interpolation
-    -- ("number\tstate\ttitle"); '+' fails because gh's jq can't add a number to a string.
-    refresh_title(pr_key, { 'gh', 'pr', 'view', '--json', 'number,state,title', '-q', '"\\(.number)\t\\(.state)\t\\(.title)"' }, function(code, output)
-      -- Reject anything not shaped like "<digits><TAB><STATE><TAB>...": gh writes
-      -- jq errors to stdout and still exits 0, which would otherwise poison the cache.
-      return (code ~= 0 or not output:match '^%d+\t%u+\t') and false or output
-    end)
+    -- ("number\tstate\ttitle"); '+' fails because gh's jq can't add a number to a
+    -- string. A draft PR reports state OPEN, so collapse isDraft into "DRAFT".
+    refresh_title(
+      pr_key,
+      { 'gh', 'pr', 'view', '--json', 'number,state,title,isDraft', '-q', '"\\(.number)\t\\(if .isDraft then "DRAFT" else .state end)\t\\(.title)"' },
+      function(code, output)
+        -- Reject anything not shaped like "<digits><TAB><STATE><TAB>...": gh writes
+        -- jq errors to stdout and still exits 0, which would otherwise poison the cache.
+        return (code ~= 0 or not output:match '^%d+\t%u+\t') and false or output
+      end
+    )
   end
 end
 
