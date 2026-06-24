@@ -107,13 +107,31 @@ vim.api.nvim_create_autocmd('ColorScheme', {
 pcall(setup_chip_hls)
 
 -- Build the chip chunks for a label in the given tone (falling back to accent).
-local function chip(label, tone)
+-- Labels are normalized to first-letter-capitalized (e.g. OPEN -> Open) unless
+-- `raw` is set (e.g. to preserve the "PR" abbreviation).
+local function chip(label, tone, raw)
   tone = chip_tone_src[tone] and tone or 'accent'
+  if not raw then
+    label = label:sub(1, 1):upper() .. label:sub(2):lower()
+  end
   return {
     { CHIP_LEFT, hl = 'DashboardChip_' .. tone .. '_cap' },
     { (' %s '):format(label), hl = 'DashboardChip_' .. tone },
     { CHIP_RIGHT, hl = 'DashboardChip_' .. tone .. '_cap' },
   }
+end
+
+-- Concatenate chip chunk-lists into one line of text chunks, with a space
+-- between each chip.
+local function chip_row(chips)
+  local text = {}
+  for i, c in ipairs(chips) do
+    if i > 1 then
+      table.insert(text, { ' ' })
+    end
+    vim.list_extend(text, c)
+  end
+  return text
 end
 
 -- Issue/PR state → chip word + tone. Draft PRs report state OPEN but are
@@ -169,12 +187,13 @@ local function get_issue_title()
     return
   end
 
-  -- Line 1: chips + "Issue #N". Line 2 (after the newline chunk): the title.
-  local text = state_chip(state)
+  -- Line 1: chips (state, optional project, "Issue #N"). Line 2: the title.
+  local chips = { state_chip(state) }
   if project ~= '' then
-    vim.list_extend(text, chip(project, project_tone(project)))
+    table.insert(chips, chip(project, project_tone(project)))
   end
-  table.insert(text, { (' Issue #%s'):format(number), hl = 'Special' })
+  table.insert(chips, chip(('Issue #%s'):format(number), 'gray'))
+  local text = chip_row(chips)
   table.insert(text, { '\n' })
   table.insert(text, { title, hl = 'Title' })
   return { text = text, width = 2000, align = 'center', padding = 1 }
@@ -199,9 +218,8 @@ local function get_pr_title()
     return
   end
 
-  -- Line 1: chip + "PR #N". Line 2 (after the newline chunk): the title.
-  local text = state_chip(state)
-  table.insert(text, { (' PR #%s'):format(number), hl = 'Special' })
+  -- Line 1: chips (state, "PR #N"). Line 2 (after the newline chunk): the title.
+  local text = chip_row { state_chip(state), chip(('PR #%s'):format(number), 'gray', true) }
   table.insert(text, { '\n' })
   table.insert(text, { title, hl = 'Title' })
   return { text = text, width = 2000, align = 'center', padding = 1 }
