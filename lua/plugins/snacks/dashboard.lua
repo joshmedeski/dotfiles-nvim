@@ -315,33 +315,36 @@ local function prime_titles()
   end
 end
 
--- Recent Claude Code conversations, newest first. Each entry is
--- { id = <session uuid>, cwd = <project dir>, title = <aiTitle> }. Populated
--- asynchronously by prime_recent_convos(); the section function only reads it.
+-- Recent Claude Code conversations for the current project, newest first. Each
+-- entry is { id = <session uuid>, title = <aiTitle> }. Populated asynchronously
+-- by prime_recent_convos(); the section function only reads it.
 local recent_convos = {}
 
--- Gather the 5 most recent conversations across every project. Claude Code
--- stores one .jsonl per session under ~/.claude/projects/<encoded-cwd>/, so
--- file mtime is recency. For each we pull the project cwd and the latest
--- aiTitle, skipping sessions whose cwd no longer exists on disk. Over-scans the
--- newest 40 candidates so skipped (deleted) projects don't starve the list.
--- Emits "<id>\t<cwd>\t<title>" lines; runs off the render path via vim.system.
+-- Gather the 5 most recent conversations for ONE project directory ($1). Claude
+-- Code stores one .jsonl per session under ~/.claude/projects/<encoded-cwd>/
+-- (cwd with '/' and '.' replaced by '-'), so scoping to the current project is
+-- just globbing that single folder; file mtime is recency. For each we pull the
+-- latest aiTitle. Emits "<id>\t<title>" lines; runs off the render path.
 local recent_convos_cmd = [[
+dir=$1
+[ -d "$dir" ] || exit 0
 n=0
-for f in $(ls -t "$HOME"/.claude/projects/*/*.jsonl 2>/dev/null | head -40); do
+for f in $(ls -t "$dir"/*.jsonl 2>/dev/null | head -5); do
   [ "$n" -ge 5 ] && break
-  out=$(jq -rs '(map(select(.type=="ai-title").aiTitle)|last) as $t | (map(.cwd)|map(select(.!=null))|first) as $c | "\($c // "")\t\($t // "")"' "$f" 2>/dev/null)
-  cwd=$(printf '%s' "$out" | cut -f1)
-  title=$(printf '%s' "$out" | cut -f2-)
-  [ -z "$cwd" ] && continue
-  [ -d "$cwd" ] || continue
-  printf '%s\t%s\t%s\n' "$(basename "$f" .jsonl)" "$cwd" "$title"
+  title=$(jq -rs '(map(select(.type=="ai-title").aiTitle)|last) // ""' "$f" 2>/dev/null)
+  printf '%s\t%s\n' "$(basename "$f" .jsonl)" "$title"
   n=$((n+1))
 done
 ]]
 
 -- Don't respawn the gather while one is already in flight (rapid reopens).
 local recent_convos_inflight = false
+
+-- Map the current working directory to its Claude Code project folder.
+local function claude_project_dir()
+  local encoded = vim.fn.getcwd():gsub('[/.]', '-')
+  return vim.fs.joinpath(vim.fn.expand '~/.claude/projects', encoded)
+end
 
 -- Refresh the recent-conversations list off the main thread, then re-render.
 -- Like prime_titles, this runs after the dashboard has painted so the jq/file
@@ -351,7 +354,7 @@ local function prime_recent_convos()
     return
   end
   recent_convos_inflight = true
-  vim.system({ 'bash', '-c', recent_convos_cmd }, { text = true }, function(res)
+  vim.system({ 'bash', '-c', recent_convos_cmd, 'recent_convos', claude_project_dir() }, { text = true }, function(res)
     vim.schedule(function()
       recent_convos_inflight = false
       if res.code ~= 0 then
@@ -359,9 +362,9 @@ local function prime_recent_convos()
       end
       local list = {}
       for line in vim.gsplit(res.stdout or '', '\n', { plain = true }) do
-        local id, cwd, title = line:match '^([^\t]+)\t([^\t]+)\t(.*)$'
-        if id and cwd then
-          list[#list + 1] = { id = id, cwd = cwd, title = title }
+        local id, title = line:match '^([^\t]+)\t(.*)$'
+        if id then
+          list[#list + 1] = { id = id, title = title }
         end
       end
       recent_convos = list
@@ -375,19 +378,20 @@ local function get_recent_conversations()
   if #recent_convos == 0 then
     return
   end
+  local cwd = vim.fn.getcwd()
   -- Title + child rows; snacks prepends the title header only when rows exist.
   local section = { icon = '💬', title = 'Recent Conversations', indent = 2, padding = 1 }
   for _, c in ipairs(recent_convos) do
-    local folder = vim.fn.fnamemodify(c.cwd, ':t')
-    local label = c.title ~= '' and (folder .. ' — ' .. c.title) or folder
-    -- Trim by display columns (not bytes) so the em dash / title text never
-    -- overflows the dashboard box or gets sliced mid-character.
+    -- All rows are this project's conversations, so the title alone is the
+    -- label (untitled sessions fall back to a short id).
+    local label = c.title ~= '' and c.title or ('Untitled (' .. c.id:sub(1, 8) .. ')')
+    -- Trim by display columns (not bytes) so the title never overflows the
+    -- dashboard box or gets sliced mid-character.
     if vim.fn.strdisplaywidth(label) > 44 then
       label = vim.fn.strcharpart(label, 0, 43) .. '…'
     end
-    -- Resume in a horizontal tmux split cd'd into the conversation's own
-    -- project dir, so the session reopens with the right context.
-    local action = (':silent !tmux split-window -h -c %s claude --resume %s'):format(vim.fn.shellescape(c.cwd), c.id)
+    -- Resume in a horizontal tmux split in this project's directory.
+    local action = (':silent !tmux split-window -h -c %s claude --resume %s'):format(vim.fn.shellescape(cwd), c.id)
     section[#section + 1] = { icon = '💬', desc = label, action = action, autokey = true }
   end
   return section
