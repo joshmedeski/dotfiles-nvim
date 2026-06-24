@@ -17,6 +17,7 @@ return {
         'c',
         'css',
         'diff',
+        'dockerfile',
         'gitignore',
         'glsl',
         'html',
@@ -34,9 +35,14 @@ return {
         'fish',
         'json',
         'just',
+        'svelte',
         'yaml',
         'toml',
+        'xml',
       }
+
+      -- plist files are XML; highlight them with the xml parser
+      vim.treesitter.language.register('xml', 'plist')
 
       -- Enable highlighting for all filetypes
       vim.api.nvim_create_autocmd('FileType', {
