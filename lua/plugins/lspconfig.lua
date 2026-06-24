@@ -358,6 +358,10 @@ return {
           filetypes = { 'sh', 'bash' },
         },
 
+        docker_language_server = {
+          filetypes = { 'dockerfile' },
+        },
+
         docker_compose_language_service = {
           filetypes = {
             'yaml',
@@ -380,6 +384,10 @@ return {
 
         black = {
           filetypes = { 'python' },
+        },
+
+        lemminx = {
+          filetypes = { 'xml', 'xsd', 'xsl', 'xslt', 'svg', 'plist' },
         },
 
         -- css_variables = {
