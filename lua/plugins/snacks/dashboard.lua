@@ -461,6 +461,15 @@ vim.api.nvim_create_autocmd('User', {
   end,
 })
 
+-- Reload the dashboard, forcing a fresh ASCII-art font. prime_header() reuses
+-- the banner cached per session name, so on a reopen the name still matches and
+-- the same font sticks. Clearing the cache first makes prime_header re-pick a
+-- random figlet font on the next SnacksDashboardOpened.
+local function reload_dashboard()
+  header_cache = nil
+  Snacks.dashboard.open()
+end
+
 -- Open Octo in a vertical split viewing the issue whose number is parsed from
 -- the checked-out branch (e.g. "123-fix-thing" → issue #123).
 local function view_branch_issue()
@@ -555,7 +564,7 @@ return {
     { icon = '🔎', key = '/', desc = 'Find Text', action = ':Grep' },
     { icon = '🐙', key = 'i', desc = 'Issue', action = view_branch_issue },
     { icon = '🔀', key = 'p', desc = 'Pull Request', action = view_branch_pr },
-    { icon = '🔄', key = 'R', desc = 'Reload Dashboard', action = ':lua Snacks.dashboard.open()' },
+    { icon = '🔄', key = 'R', desc = 'Reload Dashboard', action = reload_dashboard },
     { icon = '👋', key = 'q', desc = 'Quit', action = ':qa' },
   },
 }
