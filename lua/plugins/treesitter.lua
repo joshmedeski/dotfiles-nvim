@@ -18,6 +18,7 @@ return {
         'css',
         'diff',
         'dockerfile',
+        'gitcommit',
         'gitignore',
         'glsl',
         'html',
