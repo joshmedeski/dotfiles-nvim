@@ -20,6 +20,24 @@ return {
   config = function(_, opts)
     require('catppuccin').setup(opts)
     vim.cmd.colorscheme 'catppuccin'
+    -- Nvim's built-in OSC 11 background detection keeps a persistent
+    -- TermResponse handler that flips 'background' with :noautocmd (bypassing
+    -- the OptionSet guard below) whenever tmux reports a theme change, e.g.
+    -- when switching sessions. dark-notify owns 'background' here, so remove
+    -- the handler. Lua sets record SID_LUA, which nvim treats as its own
+    -- detection, so pinning the option from Lua can't stop it.
+    local function disable_builtin_background_detection()
+      pcall(vim.api.nvim_del_augroup_by_name, 'nvim.tty.background')
+    end
+    disable_builtin_background_detection()
+    -- Nvim re-installs the handler when a UI (re)attaches.
+    vim.api.nvim_create_autocmd('UIEnter', {
+      group = vim.api.nvim_create_augroup('dark-notify-disable-osc11', { clear = true }),
+      callback = function()
+        vim.schedule(disable_builtin_background_detection)
+      end,
+    })
+
     local last_mode = nil
     require('dark_notify').run {
       onchange = function(mode)

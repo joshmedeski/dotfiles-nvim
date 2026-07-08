@@ -66,4 +66,5 @@ Keybindings are defined per-plugin via `keys` tables (for which-key integration)
 - 2-space indentation with smart indent
 - Clipboard not synced to OS by default (`clipboard = ''`)
 - Catppuccin theme with auto dark/light switching via dark-notify
+- `plugins/catppuccin.lua` deletes Neovim's `nvim.tty.background` augroup on purpose — it disables built-in OSC 11 background detection, which tmux theme reports break (see "Upstream Watch" in README.md). Do not remove it as cleanup.
 - Persistent undo in `~/.local/state/nvim/undo`

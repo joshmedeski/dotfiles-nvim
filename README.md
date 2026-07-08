@@ -140,6 +140,30 @@ The configuration is designed for developers who want:
 
 All plugins are configured to work together seamlessly while maintaining individual functionality and customization options.
 
+## Upstream Watch
+
+Workarounds in this config for upstream bugs, and the conditions for removing them.
+
+### tmux theme reports flip Neovim to light mode (fixed 2026-07-08)
+
+**Symptom:** switching tmux sessions quickly flipped `'background'` to `light` (catppuccin → latte) even though macOS was in dark mode, and it stayed broken until reload.
+
+**Root cause chain:**
+
+1. tmux 3.6/3.7 guesses the theme from background-color luminance instead of the terminal's reported theme, and reports **light** when it doesn't know the client's background ([tmux#5342](https://github.com/tmux/tmux/issues/5342)). tmux intentionally broadcasts a theme update to all panes on every session/client switch ([tmux#4353](https://github.com/tmux/tmux/pull/4353)).
+2. Neovim 0.11+ keeps a persistent OSC 11 `TermResponse` handler (augroup `nvim.tty.background`, from [neovim#31350](https://github.com/neovim/neovim/pull/31350)) that applies each theme report via `:noautocmd set background=...` — so `OptionSet` autocmds can't guard against it.
+3. The documented opt-out ("an explicit user set of `'background'` stops detection") is broken for Lua configs: Lua sets record `SID_LUA` (-8), which Neovim misattributes as its own detection ([neovim#40631](https://github.com/neovim/neovim/issues/40631), open). So dark-notify's sets never pin the option.
+
+**Workaround (in `lua/plugins/catppuccin.lua`):** delete the `nvim.tty.background` augroup at startup and again on `UIEnter` (Neovim recreates the handler on UI attach). dark-notify is the sole owner of `'background'`. dark-notify itself has no tmux-related issues filed ([repo](https://github.com/cormacrelf/dark-notify) is mostly dormant).
+
+**Track for removal / follow-up:**
+
+- [ ] tmux release containing commit `dac65141` (fixes [tmux#5342](https://github.com/tmux/tmux/issues/5342); post-3.7b) — tmux then reports the terminal's real theme. Also adds `set -g theme dark|light|detect|terminal` to pin the reported theme.
+- [ ] [neovim#40631](https://github.com/neovim/neovim/issues/40631) fixed — Lua config sets of `'background'` would then count as user-set and stop the handler, making the augroup deletion redundant (harmless to keep).
+- [ ] If a Neovim nightly renames the `nvim.tty.background` augroup, the `pcall` deletion fails silently and the symptom returns — update the name in `catppuccin.lua`.
+
+The workaround stays correct even after both fixes land: macOS appearance (via dark-notify) is the desired source of truth, not the terminal-reported theme.
+
 ## Previously Used
 
 Plugins that were part of this config but have since been removed:
