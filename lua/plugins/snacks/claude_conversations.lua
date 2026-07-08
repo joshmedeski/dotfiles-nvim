@@ -11,9 +11,36 @@ local function claude_project_dir()
   return vim.fs.joinpath(vim.fn.expand '~/.claude/projects', encoded)
 end
 
--- Pull the latest aiTitle from one session file ($1). grep narrows to the
--- ai-title lines first so jq never parses multi-megabyte transcripts.
-local title_cmd = [[grep '"type":"ai-title"' "$1" 2>/dev/null | tail -1 | jq -r '.aiTitle // ""' 2>/dev/null]]
+-- Derive a display label from one session file ($1), falling back through
+-- progressively rougher signals so command/skill-started sessions (which never
+-- get an aiTitle) still read as something meaningful instead of "Untitled".
+-- grep prefilters keep jq off multi-megabyte transcripts on the cheap paths.
+--   1. aiTitle          - Claude's generated title (natural-language sessions)
+--   2. /command — args  - first slash command / skill invocation (skips /clear)
+--   3. last typed prompt
+--   4. first assistant sentence
+local label_cmd = [==[
+f="$1"
+
+t=$(grep '"type":"ai-title"' "$f" 2>/dev/null | tail -1 | jq -r '.aiTitle // empty' 2>/dev/null)
+if [ -n "$t" ]; then printf '%s' "$t"; exit 0; fi
+
+while IFS= read -r line; do
+  c=$(printf '%s' "$line" | jq -r '.message.content | if type == "string" then . else (map(select(.type == "text").text) | join("\n")) end' 2>/dev/null)
+  n=$(printf '%s' "$c" | sed -n 's|.*<command-name>[[:space:]]*/*\([^<[:space:]]*\).*|\1|p' | head -1)
+  [ -z "$n" ] && continue
+  [ "$n" = "clear" ] && continue
+  a=$(printf '%s' "$c" | sed -n 's|.*<command-args>[[:space:]]*\([^<]*\)</command-args>.*|\1|p' | head -1 | sed 's/[[:space:]]*$//')
+  if [ -n "$a" ]; then printf '/%s — %s' "$n" "$a" | tr '\n' ' ' | cut -c1-80; else printf '/%s' "$n"; fi
+  exit 0
+done < <(grep '<command-name>' "$f" 2>/dev/null)
+
+lp=$(grep '"type":"last-prompt"' "$f" 2>/dev/null | jq -r '.lastPrompt // empty' 2>/dev/null | grep -v '^[[:space:]]*$' | tail -1)
+if [ -n "$lp" ]; then printf '%s' "$lp" | tr '\n' ' ' | cut -c1-80; exit 0; fi
+
+at=$(jq -r 'select(.type == "assistant") | (.message.content | if type == "array" then (map(select(.type == "text").text) | join(" ")) else "" end)' "$f" 2>/dev/null | grep -v '^[[:space:]]*$' | head -1)
+if [ -n "$at" ]; then printf '%s' "$at" | tr '\n' ' ' | cut -c1-80; exit 0; fi
+]==]
 
 -- Render the recent exchange from one session file ($1) for the preview pane:
 -- plain-text user/assistant messages, tool noise stripped, newest at the bottom.
@@ -24,7 +51,7 @@ jq -r 'select(.type == "user" or .type == "assistant")
   | "── \(.type) ──\n\($t)\n"' "$1" 2>/dev/null | tail -120
 ]]
 
--- List this project's sessions newest-first as picker items. Titles come from
+-- List this project's sessions newest-first as picker items. Labels come from
 -- a single blocking pass over the files; grep+jq keep it cheap enough for the
 -- picker-open path.
 local function find_sessions()
@@ -44,7 +71,7 @@ local function find_sessions()
   end)
   local items = {}
   for idx, f in ipairs(files) do
-    local title = vim.trim(vim.fn.system { 'bash', '-c', title_cmd, 'claude_title', f.path })
+    local title = vim.trim(vim.fn.system { 'bash', '-c', label_cmd, 'claude_label', f.path })
     if title == '' then
       title = 'Untitled (' .. f.id:sub(1, 8) .. ')'
     end
