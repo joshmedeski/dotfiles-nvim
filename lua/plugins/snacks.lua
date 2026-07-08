@@ -79,6 +79,13 @@ return {
       desc = 'Buffers',
     },
     {
+      '<leader>ah',
+      function()
+        require 'plugins.snacks.claude_conversations'()
+      end,
+      desc = 'Claude conversation history',
+    },
+    {
       '<leader>:',
       function()
         Snacks.picker.command_history()
