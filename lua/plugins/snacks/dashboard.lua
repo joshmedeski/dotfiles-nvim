@@ -7,6 +7,12 @@
 -- and only a changed name triggers a rebuild.
 local header_cache = nil
 
+-- Figlet fonts bundled with this config (e.g. "ANSI Shadow"), added to the
+-- random banner pool alongside figlet's own installed fonts. Resolved relative
+-- to this file (lua/plugins/snacks/dashboard.lua → repo root → /fonts) so it
+-- works wherever the config is checked out.
+local bundled_font_dir = vim.fn.fnamemodify(debug.getinfo(1, 'S').source:sub(2), ':h:h:h:h') .. '/fonts'
+
 ---@return snacks.dashboard.Section
 local function get_header()
   local text = header_cache and header_cache.text or vim.fn.fnamemodify(vim.fn.getcwd(), ':t')
@@ -395,12 +401,18 @@ local function get_recent_conversations()
   return section
 end
 
--- Turn raw figlet output into per-character rainbow-highlighted chunks.
+-- Turn raw figlet output into per-character rainbow-highlighted chunks. Some
+-- fonts (e.g. ANSI Shadow) use multi-byte UTF-8 box-drawing characters, so we
+-- must iterate by character, not by byte (Lua's `.` pattern matches bytes and
+-- would split a single character into invalid fragments, corrupting the
+-- width calculation snacks uses to center the header).
 local function build_header_text(figlet)
   local rainbow = { 'Rainbow1', 'Rainbow2', 'Rainbow3', 'Rainbow4', 'Rainbow5', 'Rainbow6' }
   local result = {}
   local color_idx = 1
-  for char in figlet:gmatch '.' do
+  local nchars = vim.fn.strchars(figlet)
+  for i = 0, nchars - 1 do
+    local char = vim.fn.strcharpart(figlet, i, 1)
     if char:match '%S' then
       table.insert(result, { char, hl = rainbow[color_idx] })
       color_idx = color_idx % #rainbow + 1
@@ -433,6 +445,7 @@ local function prime_header()
         vim.schedule(function()
           local font_dir = dres.code == 0 and dres.stdout:gsub('%s+$', '') or ''
           local fonts = font_dir ~= '' and vim.fn.globpath(font_dir, '*.flf', false, true) or {}
+          vim.list_extend(fonts, vim.fn.globpath(bundled_font_dir, '*.flf', false, true))
           if #fonts == 0 then
             return set_header(name, name) -- plain-text fallback
           end
@@ -506,6 +519,19 @@ local function view_branch_pr()
   vim.cmd('Octo pr edit ' .. number)
 end
 
+-- Rename the current tmux window to mark it as an AI session, then run the
+-- given action (a Vim command string or a function). A no-op outside tmux.
+local function ai_session(action)
+  return function()
+    vim.fn.system { 'tmux', 'rename-window', '📝🤖' }
+    if type(action) == 'function' then
+      action()
+    else
+      vim.cmd(action)
+    end
+  end
+end
+
 ---@return snacks.dashboard.Section?
 local function get_unstaged_changes()
   if not Snacks.git.get_root() then
@@ -558,8 +584,8 @@ return {
     -- get_unstaged_changes,
     get_recent_conversations,
     { icon = '⏳', title = 'Recent Files', section = 'recent_files', cwd = true, indent = 2, padding = 1 },
-    { icon = '🤖', key = 'c', desc = 'Claude Code', action = ':ClaudeCode' },
-    { icon = '🥧', key = 'a', desc = 'AI (pi)', action = ':silent !tmux split-window -h pi' },
+    { icon = '🤖', key = 'c', desc = 'Claude Code', action = ai_session ':ClaudeCode' },
+    { icon = '🥧', key = 'a', desc = 'AI (pi)', action = ai_session ':silent !tmux split-window -h pi' },
     { icon = '📑', key = 'f', desc = 'Files', action = ':GoToFile' },
     { icon = '🔎', key = '/', desc = 'Find Text', action = ':Grep' },
     { icon = '🐙', key = 'i', desc = 'Issue', action = view_branch_issue },
