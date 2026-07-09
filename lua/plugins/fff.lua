@@ -1,3 +1,11 @@
+-- fff's prebuilt binary uses the zlob walker, which only reads .gitignore files
+-- inside the walked tree — it does not climb to the git root. Rooting the walk at
+-- the git top-level puts the repo-root .gitignore in scope so live grep honors it
+-- even when nvim is opened in a monorepo subdirectory. Falls back to cwd outside a repo.
+local function grep_root()
+  return vim.fs.root(vim.uv.cwd(), '.git') or vim.uv.cwd()
+end
+
 return {
   'dmtrKovalenko/fff.nvim',
   lazy = false,
@@ -34,21 +42,21 @@ return {
     {
       '<leader>/',
       function()
-        require('fff').live_grep()
+        require('fff').live_grep { cwd = grep_root() }
       end,
       desc = 'Grep',
     },
     {
       '<leader>sg',
       function()
-        require('fff').live_grep()
+        require('fff').live_grep { cwd = grep_root() }
       end,
       desc = 'Grep',
     },
     {
       '<leader>sw',
       function()
-        require('fff').live_grep { query = vim.fn.expand '<cword>' }
+        require('fff').live_grep { cwd = grep_root(), query = vim.fn.expand '<cword>' }
       end,
       desc = 'Visual selection or word',
       mode = { 'n', 'x' },
