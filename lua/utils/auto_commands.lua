@@ -15,6 +15,9 @@ vim.filetype.add {
   filename = {
     ['.gitignorefiles'] = 'gitignore',
   },
+  pattern = {
+    ['.*%.env%.var'] = 'env',
+  },
 }
 
 vim.api.nvim_create_augroup('HelpSplitRight', { clear = true })
