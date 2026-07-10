@@ -11,36 +11,11 @@ local function claude_project_dir()
   return vim.fs.joinpath(vim.fn.expand '~/.claude/projects', encoded)
 end
 
--- Derive a display label from one session file ($1), falling back through
--- progressively rougher signals so command/skill-started sessions (which never
--- get an aiTitle) still read as something meaningful instead of "Untitled".
--- grep prefilters keep jq off multi-megabyte transcripts on the cheap paths.
---   1. aiTitle          - Claude's generated title (natural-language sessions)
---   2. /command — args  - first slash command / skill invocation (skips /clear)
---   3. last typed prompt
---   4. first assistant sentence
-local label_cmd = [==[
-f="$1"
-
-t=$(grep '"type":"ai-title"' "$f" 2>/dev/null | tail -1 | jq -r '.aiTitle // empty' 2>/dev/null)
-if [ -n "$t" ]; then printf '%s' "$t"; exit 0; fi
-
-while IFS= read -r line; do
-  c=$(printf '%s' "$line" | jq -r '.message.content | if type == "string" then . else (map(select(.type == "text").text) | join("\n")) end' 2>/dev/null)
-  n=$(printf '%s' "$c" | sed -n 's|.*<command-name>[[:space:]]*/*\([^<[:space:]]*\).*|\1|p' | head -1)
-  [ -z "$n" ] && continue
-  [ "$n" = "clear" ] && continue
-  a=$(printf '%s' "$c" | sed -n 's|.*<command-args>[[:space:]]*\([^<]*\)</command-args>.*|\1|p' | head -1 | sed 's/[[:space:]]*$//')
-  if [ -n "$a" ]; then printf '/%s — %s' "$n" "$a" | tr '\n' ' ' | cut -c1-80; else printf '/%s' "$n"; fi
-  exit 0
-done < <(grep '<command-name>' "$f" 2>/dev/null)
-
-lp=$(grep '"type":"last-prompt"' "$f" 2>/dev/null | jq -r '.lastPrompt // empty' 2>/dev/null | grep -v '^[[:space:]]*$' | tail -1)
-if [ -n "$lp" ]; then printf '%s' "$lp" | tr '\n' ' ' | cut -c1-80; exit 0; fi
-
-at=$(jq -r 'select(.type == "assistant") | (.message.content | if type == "array" then (map(select(.type == "text").text) | join(" ")) else "" end)' "$f" 2>/dev/null | grep -v '^[[:space:]]*$' | head -1)
-if [ -n "$at" ]; then printf '%s' "$at" | tr '\n' ' ' | cut -c1-80; exit 0; fi
-]==]
+-- Derive a display label from one session file via the shared cascade (aiTitle
+-- → /command — args → last prompt → first assistant sentence). Sourcing the
+-- function then calling it keeps the dashboard and this picker in lockstep.
+local label_fn = require 'plugins.snacks.claude_label'
+local label_cmd = label_fn .. '\nclaude_label "$1"'
 
 -- Render the recent exchange from one session file ($1) for the preview pane:
 -- plain-text user/assistant messages, tool noise stripped, newest at the bottom.

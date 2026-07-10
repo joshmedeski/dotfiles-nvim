@@ -327,15 +327,19 @@ local recent_convos = {}
 -- Gather the 5 most recent conversations for ONE project directory ($1). Claude
 -- Code stores one .jsonl per session under ~/.claude/projects/<encoded-cwd>/
 -- (cwd with '/' and '.' replaced by '-'), so scoping to the current project is
--- just globbing that single folder; file mtime is recency. For each we pull the
--- latest aiTitle. Emits "<id>\t<title>" lines; runs off the render path.
-local recent_convos_cmd = [[
+-- just globbing that single folder; file mtime is recency. Labels come from the
+-- shared claude_label cascade (aiTitle → /command — args → last prompt → first
+-- assistant sentence) so command/skill-started sessions read meaningfully
+-- instead of "Untitled" here, exactly as they do in the picker. Emits
+-- "<id>\t<title>" lines; runs off the render path.
+local recent_convos_cmd = require 'plugins.snacks.claude_label'
+  .. [[
 dir=$1
 [ -d "$dir" ] || exit 0
 n=0
 for f in $(ls -t "$dir"/*.jsonl 2>/dev/null | head -5); do
   [ "$n" -ge 5 ] && break
-  title=$(jq -rs '(map(select(.type=="ai-title").aiTitle)|last) // ""' "$f" 2>/dev/null)
+  title=$(claude_label "$f")
   printf '%s\t%s\n' "$(basename "$f" .jsonl)" "$title"
   n=$((n+1))
 done
