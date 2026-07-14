@@ -439,6 +439,9 @@ local function prime_header()
   vim.system({ 'tmux', 'display-message', '-p', '#S' }, { text = true }, function(nres)
     vim.schedule(function()
       local name = (nres.code == 0 and nres.stdout or ''):gsub('%s+$', '')
+      -- Trim to the part before an em dash (e.g. "project — branch" → "project")
+      -- so the banner shows just the session name, not the trailing detail.
+      name = vim.trim((name:gsub('%s*—.*$', '')))
       if name == '' then
         name = vim.fn.fnamemodify(vim.fn.getcwd(), ':t')
       end
