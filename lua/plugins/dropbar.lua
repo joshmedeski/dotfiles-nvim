@@ -7,6 +7,17 @@ return {
   config = function()
     local bar = require 'dropbar.bar'
 
+    local function set_claude_hl()
+      local ok, palette = pcall(require('catppuccin.palettes').get_palette)
+      vim.api.nvim_set_hl(0, 'DropbarClaude', { fg = ok and palette.peach or '#fab387', bold = true })
+    end
+    set_claude_hl()
+
+    vim.api.nvim_create_autocmd('ColorScheme', {
+      group = vim.api.nvim_create_augroup('dropbar-claude-hl', { clear = true }),
+      callback = set_claude_hl,
+    })
+
     ---@class dropbar_source_t
     local sidekick = {
       get_symbols = function(buff, _, _)
@@ -219,6 +230,17 @@ return {
         local stats = {}
 
         local abs_path = vim.api.nvim_buf_get_name(buff)
+        if abs_path:match 'claude%-prompt.*%.md$' then
+          return {
+            bar.dropbar_symbol_t:new {
+              icon = '󱚣 ',
+              icon_hl = 'DropbarClaude',
+              name = 'Claude Code',
+              name_hl = 'DropbarClaude',
+            },
+          }
+        end
+
         if abs_path:match 'pi%-editor' then
           return {
             bar.dropbar_symbol_t:new {
