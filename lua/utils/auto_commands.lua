@@ -187,6 +187,58 @@ vim.api.nvim_create_autocmd('FileChangedShellPost', {
   end,
 })
 
+-- Preserve cursor and scroll position when leaving and returning to a buffer.
+-- Neovim remembers a buffer's last cursor line but not its scroll position, so
+-- it recenters on re-entry; saving/restoring the full view keeps it put.
+-- Keyed per window+buffer (views[win][buf]) so the same buffer shown in two
+-- splits keeps an independent position in each.
+local remember_view = vim.api.nvim_create_augroup('remember-view', { clear = true })
+local views = {}
+
+vim.api.nvim_create_autocmd('BufWinLeave', {
+  group = remember_view,
+  callback = function(args)
+    if vim.bo[args.buf].buftype ~= '' then
+      return
+    end
+    local win = vim.api.nvim_get_current_win()
+    views[win] = views[win] or {}
+    views[win][args.buf] = vim.fn.winsaveview()
+  end,
+})
+
+vim.api.nvim_create_autocmd('BufWinEnter', {
+  group = remember_view,
+  callback = function(args)
+    if vim.bo[args.buf].buftype ~= '' then
+      return
+    end
+    local win = vim.api.nvim_get_current_win()
+    local view = views[win] and views[win][args.buf]
+    if view then
+      vim.fn.winrestview(view)
+    end
+  end,
+})
+
+-- Drop saved views for closed windows / deleted buffers so the table can't grow
+-- unbounded over a long session.
+vim.api.nvim_create_autocmd('WinClosed', {
+  group = remember_view,
+  callback = function(args)
+    views[tonumber(args.match)] = nil
+  end,
+})
+
+vim.api.nvim_create_autocmd({ 'BufDelete', 'BufWipeout' }, {
+  group = remember_view,
+  callback = function(args)
+    for _, bufs in pairs(views) do
+      bufs[args.buf] = nil
+    end
+  end,
+})
+
 -- vim.api.nvim_create_autocmd('BufWritePost', {
 --   pattern = { 'sketchybarrc' },
 --   command = '!brew services restart sketchybar',
