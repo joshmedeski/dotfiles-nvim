@@ -348,9 +348,12 @@ done
 -- Don't respawn the gather while one is already in flight (rapid reopens).
 local recent_convos_inflight = false
 
--- Map the current working directory to its Claude Code project folder.
+-- Map the current working directory to its Claude Code project folder. Claude
+-- Code encodes the cwd by replacing every non-alphanumeric character with '-'
+-- (so '/', '.', '_', etc. all collapse to dashes) — matching that exactly is
+-- what lets paths like "joshmedeski_com" resolve to "joshmedeski-com" on disk.
 local function claude_project_dir()
-  local encoded = vim.fn.getcwd():gsub('[/.]', '-')
+  local encoded = vim.fn.getcwd():gsub('[^%w]', '-')
   return vim.fs.joinpath(vim.fn.expand '~/.claude/projects', encoded)
 end
 
