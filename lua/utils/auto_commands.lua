@@ -127,7 +127,7 @@ vim.api.nvim_create_autocmd('BufDelete', {
         return vim.bo[b].buflisted and vim.bo[b].buftype == '' and name ~= ''
       end, vim.api.nvim_list_bufs())
       if #bufs == 0 then
-        Snacks.dashboard.open()
+        require('utils.dashboard').open()
       end
     end)
   end,

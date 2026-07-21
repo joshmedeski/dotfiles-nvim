@@ -490,7 +490,7 @@ vim.api.nvim_create_autocmd('User', {
 -- random figlet font on the next SnacksDashboardOpened.
 local function reload_dashboard()
   header_cache = nil
-  Snacks.dashboard.open()
+  require('utils.dashboard').open()
 end
 
 -- Open Octo in a vertical split viewing the issue whose number is parsed from

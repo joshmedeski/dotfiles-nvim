@@ -67,7 +67,7 @@ return {
     {
       '<leader>H',
       function()
-        Snacks.dashboard.open()
+        require('utils.dashboard').open()
       end,
       desc = 'Dashboard',
     },
