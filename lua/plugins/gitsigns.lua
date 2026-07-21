@@ -74,8 +74,24 @@ return {
               return
             end
             jumped = true
-            gitsigns.nav_hunk('first', { wrap = false, navigation_message = false })
-            vim.cmd 'normal! zt'
+            -- Defer so the window has finished drawing before we scroll.
+            -- `nav_hunk('first')` is async and lands on the hunk's *end*, so
+            -- read the first hunk directly and jump to its start instead.
+            vim.schedule(function()
+              local hunks = gitsigns.get_hunks(bufnr)
+              if not hunks or #hunks == 0 then
+                return
+              end
+              local win = vim.fn.bufwinid(bufnr)
+              if win == -1 then
+                return
+              end
+              local line = math.max(math.min(hunks[1].added.start, vim.api.nvim_buf_line_count(bufnr)), 1)
+              vim.api.nvim_win_set_cursor(win, { line, 0 })
+              vim.api.nvim_win_call(win, function()
+                vim.cmd 'normal! zt'
+              end)
+            end)
           end,
         })
       end,
