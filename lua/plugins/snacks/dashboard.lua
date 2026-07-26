@@ -529,19 +529,6 @@ local function view_branch_pr()
   vim.cmd('Octo pr edit ' .. number)
 end
 
--- Rename the current tmux window to mark it as an AI session, then run the
--- given action (a Vim command string or a function). A no-op outside tmux.
-local function ai_session(action)
-  return function()
-    vim.fn.system { 'tmux', 'rename-window', '📝🤖' }
-    if type(action) == 'function' then
-      action()
-    else
-      vim.cmd(action)
-    end
-  end
-end
-
 ---@return snacks.dashboard.Section?
 local function get_unstaged_changes()
   if not Snacks.git.get_root() then
@@ -594,8 +581,8 @@ return {
     -- get_unstaged_changes,
     get_recent_conversations,
     { icon = '⏳', title = 'Recent Files', section = 'recent_files', cwd = true, indent = 2, padding = 1 },
-    { icon = '🤖', key = 'c', desc = 'Claude Code', action = ai_session ':ClaudeCode' },
-    { icon = '🥧', key = 'a', desc = 'AI (pi)', action = ai_session ':silent !tmux split-window -h pi' },
+    { icon = '🤖', key = 'c', desc = 'Claude Code', action = ':ClaudeCode' },
+    { icon = '🥧', key = 'a', desc = 'AI (pi)', action = ':silent !tmux split-window -h pi' },
     { icon = '📑', key = 'f', desc = 'Files', action = ':GoToFile' },
     { icon = '🔎', key = '/', desc = 'Find Text', action = ':Grep' },
     { icon = '🐙', key = 'i', desc = 'Issue', action = view_branch_issue },
