@@ -72,7 +72,7 @@ return {
       desc = 'Dashboard',
     },
     {
-      '<leader>,',
+      '<leader>b',
       function()
         Snacks.picker.buffers()
       end,
@@ -93,13 +93,6 @@ return {
       desc = 'Command History',
     },
     -- find
-    {
-      '<leader>fb',
-      function()
-        Snacks.picker.buffers()
-      end,
-      desc = 'Buffers',
-    },
     {
       '<leader>fr',
       function()
