@@ -1,7 +1,8 @@
 -- Find And Replace plugin for neovim
 return {
   'MagicDuck/grug-far.nvim',
-  opts = { headerMaxWidth = 80 },
+  -- Match navigation recenters the source window by default; keep the view put.
+  opts = { headerMaxWidth = 80, centerOnNavigation = false },
   cmd = 'GrugFar',
   keys = {
     {
