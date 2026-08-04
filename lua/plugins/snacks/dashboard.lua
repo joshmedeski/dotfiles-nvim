@@ -529,37 +529,6 @@ local function view_branch_pr()
   vim.cmd('Octo pr edit ' .. number)
 end
 
--- Open every file this branch touches relative to origin/main. Uses the
--- three-dot range so files changed on origin/main after the branch point are
--- ignored, and drops deletions (nothing to open). Paths come back relative to
--- the repo root, which may differ from Neovim's cwd, so they're joined with the
--- root before opening.
-local function open_branch_changes()
-  local root = Snacks.git.get_root()
-  if not root then
-    return vim.notify('Not in a git repository', vim.log.levels.WARN)
-  end
-
-  local result = vim.fn.system { 'git', '-C', root, 'diff', '--name-only', '--diff-filter=d', 'origin/main...HEAD' }
-  if vim.v.shell_error ~= 0 then
-    return vim.notify('Could not diff against origin/main', vim.log.levels.WARN)
-  end
-
-  local files = {}
-  for line in vim.gsplit(result, '\n', { plain = true }) do
-    if line ~= '' then
-      files[#files + 1] = vim.fs.joinpath(root, line)
-    end
-  end
-  if #files == 0 then
-    return vim.notify('No files changed on this branch', vim.log.levels.INFO)
-  end
-
-  for _, file in ipairs(files) do
-    vim.cmd.edit(vim.fn.fnameescape(file))
-  end
-end
-
 ---@return snacks.dashboard.Section?
 local function get_unstaged_changes()
   if not Snacks.git.get_root() then
@@ -618,7 +587,7 @@ return {
     { icon = '🔎', key = '/', desc = 'Find Text', action = ':Grep' },
     { icon = '🐙', key = 'i', desc = 'Issue', action = view_branch_issue },
     { icon = '🔀', key = 'p', desc = 'Pull Request', action = view_branch_pr },
-    { icon = '📂', key = 'D', desc = 'Branch Changes', action = open_branch_changes },
+    { icon = '📂', key = 'D', desc = 'Branch Changes', action = require('utils.git').open_branch_changes },
     { icon = '🔄', key = 'R', desc = 'Reload Dashboard', action = reload_dashboard },
     { icon = '👋', key = 'q', desc = 'Quit', action = ':qa' },
   },
