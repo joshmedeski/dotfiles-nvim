@@ -96,5 +96,27 @@ return {
         })
       end,
     },
+    config = function(_, opts)
+      require('gitsigns').setup(opts)
+
+      -- Render git signs on *every* screen row of a wrapped line. The built-in
+      -- sign column only draws on a wrapped line's first row, so gitsigns'
+      -- statuscolumn renderer is used instead: it keys off `v:lnum`, which is
+      -- the same for each row of a wrapped line.
+      --
+      -- Calling `gitsigns.statuscolumn()` makes gitsigns stop placing its own
+      -- signs, so `%s` is left to diagnostics only (no contention for the one
+      -- shared gutter cell).
+      _G.gitsigns_statuscolumn = function()
+        -- Virtual lines (diagnostics, inline hunk previews) aren't buffer lines.
+        if vim.v.virtnum < 0 or vim.bo.buftype ~= '' then
+          return '  '
+        end
+        -- Two cells wide: the sign glyph plus a gap before the code.
+        return require('gitsigns').statuscolumn()
+      end
+
+      vim.o.statuscolumn = '%s%{%v:lua.gitsigns_statuscolumn()%}'
+    end,
   },
 }
