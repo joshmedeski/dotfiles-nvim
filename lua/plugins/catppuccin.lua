@@ -125,31 +125,15 @@ return {
           PackageInfoInErrorVersion = { fg = colors.red },
         }
       end,
+      -- `auto_integrations` (on by default) enables integrations for every
+      -- lazy-installed plugin, so only overrides belong here: integrations with
+      -- sub-options, and ones deliberately turned off.
       integrations = {
-        avante = {
-          enabled = true,
-          windows_sidebar_header_rounded = true,
-        },
-        blink_cmp = true,
-        cmp = true,
         dropbar = {
           enabled = true,
           color_mode = true,
         },
-        fidget = true,
-        gitsigns = true,
-        lsp_trouble = true,
-        mason = true,
-        neotest = true,
-        noice = true,
-        notify = true,
-        octo = true,
-        telescope = true,
-        treesitter = true,
         treesitter_context = false,
-        snacks = true,
-        illuminate = true,
-        which_key = true,
         native_lsp = {
           enabled = true,
           virtual_text = {
