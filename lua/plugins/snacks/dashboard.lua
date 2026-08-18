@@ -493,8 +493,8 @@ local function reload_dashboard()
   require('utils.dashboard').open()
 end
 
--- Open Octo in a vertical split viewing the issue whose number is parsed from
--- the checked-out branch (e.g. "123-fix-thing" → issue #123).
+-- Open the GitHub issue whose number is parsed from the checked-out branch
+-- (e.g. "123-fix-thing" → issue #123) in the browser.
 local function view_branch_issue()
   local branch = vim.fn.system { 'git', 'rev-parse', '--abbrev-ref', 'HEAD' }
   if vim.v.shell_error ~= 0 then
@@ -507,26 +507,28 @@ local function view_branch_issue()
     return vim.notify(('No issue number found in branch "%s"'):format(branch), vim.log.levels.WARN)
   end
 
-  vim.cmd 'vsplit'
-  vim.cmd('Octo issue edit ' .. number)
+  local url = vim.fn.system { 'gh', 'issue', 'view', number, '--json', 'url', '-q', '.url' }
+  if vim.v.shell_error ~= 0 or url:match '^%s*$' then
+    return vim.notify(('No issue #%s found'):format(number), vim.log.levels.WARN)
+  end
+
+  vim.ui.open((url:gsub('%s+$', '')))
 end
 
--- Open Octo in a vertical split viewing the pull request associated with the
--- checked-out branch. gh resolves the PR from the current branch directly, so
--- no parsing is needed; exits with a notice when the branch has no PR.
+-- Open the GitHub pull request associated with the checked-out branch in the
+-- browser. gh resolves the PR from the current branch directly, so no parsing
+-- is needed; exits with a notice when the branch has no PR.
 local function view_branch_pr()
   if not Snacks.git.get_root() then
     return vim.notify('Not in a git repository', vim.log.levels.WARN)
   end
 
-  local number = vim.fn.system { 'gh', 'pr', 'view', '--json', 'number', '-q', '.number' }
-  if vim.v.shell_error ~= 0 or number:match '^%s*$' then
+  local url = vim.fn.system { 'gh', 'pr', 'view', '--json', 'url', '-q', '.url' }
+  if vim.v.shell_error ~= 0 or url:match '^%s*$' then
     return vim.notify('No pull request found for the current branch', vim.log.levels.WARN)
   end
-  number = number:gsub('%s+$', '')
 
-  vim.cmd 'vsplit'
-  vim.cmd('Octo pr edit ' .. number)
+  vim.ui.open((url:gsub('%s+$', '')))
 end
 
 ---@return snacks.dashboard.Section?
