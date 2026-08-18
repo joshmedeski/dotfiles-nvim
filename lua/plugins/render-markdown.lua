@@ -15,7 +15,7 @@ return {
       border = 'none',
     },
     dash = {
-      icon = '󰇘',
+      enabled = false,
     },
     link = {
       wiki = { icon = '' },
