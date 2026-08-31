@@ -552,6 +552,43 @@ local function get_unstaged_changes()
   }
 end
 
+-- Linked worktrees only: `git worktree list` always includes the main working
+-- tree as its first line, so anything beyond that means this repo has extra
+-- worktrees worth cleaning up.
+---@return boolean
+local function has_worktrees()
+  if not Snacks.git.get_root() then
+    return false
+  end
+  local result = vim.fn.system 'git worktree list'
+  if vim.v.shell_error ~= 0 then
+    return false
+  end
+  local count = 0
+  for _ in result:gmatch '[^\n]+' do
+    count = count + 1
+  end
+  return count > 1
+end
+
+-- git_worktree_cleanup lives in ~/.config/bin, which only lands on PATH via
+-- fish's config, so the pane runs it through a login fish rather than the bare
+-- sh tmux would otherwise use. --hold makes the script wait for q before
+-- exiting, so its results survive the pane closing on exit.
+local function cleanup_worktrees()
+  vim.system { 'tmux', 'split-window', '-h', '-c', vim.fn.getcwd(), 'fish', '-lc', 'git_worktree_cleanup --hold' }
+end
+
+-- Only offered when linked worktrees exist, so the key is absent on the
+-- common single-worktree repo instead of firing a no-op cleanup.
+---@return snacks.dashboard.Section?
+local function get_worktrees_cleanup()
+  if not has_worktrees() then
+    return
+  end
+  return { icon = '🌳', key = 'X', desc = 'Cleanup Worktrees', action = cleanup_worktrees }
+end
+
 ---@type snacks.dashboard.Config
 return {
   width = 60,
@@ -590,6 +627,7 @@ return {
     { icon = '🐙', key = 'i', desc = 'Issue', action = view_branch_issue },
     { icon = '🔀', key = 'p', desc = 'Pull Request', action = view_branch_pr },
     { icon = '📂', key = 'D', desc = 'Branch Changes', action = require('utils.git').open_branch_changes },
+    get_worktrees_cleanup,
     { icon = '🔄', key = 'R', desc = 'Reload Dashboard', action = reload_dashboard },
     { icon = '👋', key = 'q', desc = 'Quit', action = ':qa' },
   },
