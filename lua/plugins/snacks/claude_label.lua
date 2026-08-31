@@ -8,13 +8,15 @@
 -- string then invoke `claude_label "<file>"`. It uses `return` (not `exit`) so
 -- callers can loop over several files in one bash invocation.
 --
--- The cascade falls through progressively rougher signals so command/skill-
--- started sessions (which never get an aiTitle) still read as something
--- meaningful instead of "Untitled". grep prefilters keep jq off multi-megabyte
--- transcripts on the cheap paths.
---   1. aiTitle          - Claude's generated title (natural-language sessions)
---   2. /command — args  - first slash command / skill invocation (skips /clear)
---   3. last typed prompt
+-- Claude only writes its aiTitle after the first exchange (~line 17 of the
+-- transcript), so everything below it exists to fill that opening window and
+-- to cover sessions that never got one. The typed prompt outranks the raw
+-- /command form because it reads as natural language once the leading command
+-- token is stripped. grep prefilters keep jq off multi-megabyte transcripts on
+-- the cheap paths.
+--   1. aiTitle          - Claude's generated title, once it lands
+--   2. typed prompt     - last thing typed, minus any leading /command
+--   3. /command — args  - first slash command / skill invocation (skips /clear)
 --   4. first assistant sentence
 return [==[
 claude_label() {
@@ -22,6 +24,10 @@ claude_label() {
 
   t=$(grep '"type":"ai-title"' "$f" 2>/dev/null | tail -1 | jq -r '.aiTitle // empty' 2>/dev/null)
   if [ -n "$t" ]; then printf '%s' "$t"; return 0; fi
+
+  lp=$(grep '"type":"last-prompt"' "$f" 2>/dev/null | jq -r '.lastPrompt // empty' 2>/dev/null | grep -v '^[[:space:]]*$' | tail -1)
+  lp=$(printf '%s' "$lp" | sed 's|^[[:space:]]*/[^[:space:]]*[[:space:]]*||')
+  if [ -n "$lp" ]; then printf '%s' "$lp" | tr '\n' ' ' | cut -c1-80; return 0; fi
 
   while IFS= read -r line; do
     c=$(printf '%s' "$line" | jq -r '.message.content | if type == "string" then . else (map(select(.type == "text").text) | join("\n")) end' 2>/dev/null)
@@ -32,9 +38,6 @@ claude_label() {
     if [ -n "$a" ]; then printf '/%s — %s' "$n" "$a" | tr '\n' ' ' | cut -c1-80; else printf '/%s' "$n"; fi
     return 0
   done < <(grep '<command-name>' "$f" 2>/dev/null)
-
-  lp=$(grep '"type":"last-prompt"' "$f" 2>/dev/null | jq -r '.lastPrompt // empty' 2>/dev/null | grep -v '^[[:space:]]*$' | tail -1)
-  if [ -n "$lp" ]; then printf '%s' "$lp" | tr '\n' ' ' | cut -c1-80; return 0; fi
 
   at=$(jq -r 'select(.type == "assistant") | (.message.content | if type == "array" then (map(select(.type == "text").text) | join(" ")) else "" end)' "$f" 2>/dev/null | grep -v '^[[:space:]]*$' | head -1)
   if [ -n "$at" ]; then printf '%s' "$at" | tr '\n' ' ' | cut -c1-80; return 0; fi
