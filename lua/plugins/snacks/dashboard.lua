@@ -319,69 +319,46 @@ local function prime_titles()
   end
 end
 
--- Recent Claude Code conversations for the current project, newest first. Each
--- entry is { id = <session uuid>, title = <aiTitle> }. Populated asynchronously
--- by prime_recent_convos(); the section function only reads it.
+-- Recent Claude Code conversations for the current project, newest first, as
+-- returned by the shared claude-sessions resolver (id, title, mtime, …).
+-- Populated asynchronously by prime_recent_convos(); the section function only
+-- reads it.
 local recent_convos = {}
-
--- Gather the 5 most recent conversations for ONE project directory ($1). Claude
--- Code stores one .jsonl per session under ~/.claude/projects/<encoded-cwd>/
--- (cwd with '/' and '.' replaced by '-'), so scoping to the current project is
--- just globbing that single folder; file mtime is recency. Labels come from the
--- shared claude_label cascade (aiTitle → /command — args → last prompt → first
--- assistant sentence) so command/skill-started sessions read meaningfully
--- instead of "Untitled" here, exactly as they do in the picker. Emits
--- "<id>\t<title>" lines; runs off the render path.
-local recent_convos_cmd = require 'plugins.snacks.claude_label'
-  .. [[
-dir=$1
-[ -d "$dir" ] || exit 0
-n=0
-for f in $(ls -t "$dir"/*.jsonl 2>/dev/null | head -5); do
-  [ "$n" -ge 5 ] && break
-  title=$(claude_label "$f")
-  printf '%s\t%s\n' "$(basename "$f" .jsonl)" "$title"
-  n=$((n+1))
-done
-]]
+local claude_sessions = require 'plugins.snacks.claude_sessions'
 
 -- Don't respawn the gather while one is already in flight (rapid reopens).
 local recent_convos_inflight = false
 
--- Map the current working directory to its Claude Code project folder. Claude
--- Code encodes the cwd by replacing every non-alphanumeric character with '-'
--- (so '/', '.', '_', etc. all collapse to dashes) — matching that exactly is
--- what lets paths like "joshmedeski_com" resolve to "joshmedeski-com" on disk.
-local function claude_project_dir()
-  local encoded = vim.fn.getcwd():gsub('[^%w]', '-')
-  return vim.fs.joinpath(vim.fn.expand '~/.claude/projects', encoded)
-end
-
 -- Refresh the recent-conversations list off the main thread, then re-render.
--- Like prime_titles, this runs after the dashboard has painted so the jq/file
--- scanning never blocks the initial open.
+-- Like prime_titles, this runs after the dashboard has painted so scanning the
+-- transcripts never blocks the initial open. The resolver does the whole job in
+-- one process — locating this project's session folder, ranking by recency and
+-- deriving each title — where this used to be a bash loop shelling out to jq
+-- once per file.
 local function prime_recent_convos()
   if recent_convos_inflight then
     return
   end
   recent_convos_inflight = true
-  vim.system({ 'bash', '-c', recent_convos_cmd, 'recent_convos', claude_project_dir() }, { text = true }, function(res)
-    vim.schedule(function()
+  -- pcall because vim.system raises when `node` is missing, and the callback
+  -- that clears the guard would then never run.
+  local ok = pcall(
+    vim.system,
+    claude_sessions.list_cmd(vim.fn.getcwd(), 5),
+    { text = true },
+    vim.schedule_wrap(function(res)
       recent_convos_inflight = false
-      if res.code ~= 0 then
+      local sessions = claude_sessions.decode(res)
+      if not sessions then
         return
       end
-      local list = {}
-      for line in vim.gsplit(res.stdout or '', '\n', { plain = true }) do
-        local id, title = line:match '^([^\t]+)\t(.*)$'
-        if id then
-          list[#list + 1] = { id = id, title = title }
-        end
-      end
-      recent_convos = list
+      recent_convos = sessions
       Snacks.dashboard.update()
     end)
-  end)
+  )
+  if not ok then
+    recent_convos_inflight = false
+  end
 end
 
 ---@return snacks.dashboard.Section?

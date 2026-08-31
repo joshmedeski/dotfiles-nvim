@@ -3,19 +3,11 @@
 -- Claude terminal is running. Fuzzy-matches on session title, previews the
 -- recent message exchange, and resumes the selection in a tmux split (same
 -- action as the dashboard's Recent Conversations section).
+--
+-- Locating and titling those sessions is the shared resolver's job; the preview
+-- below stays local because it renders the transcript body, not the title.
 
--- Map the current working directory to its Claude Code project folder
--- (cwd with '/' and '.' replaced by '-').
-local function claude_project_dir()
-  local encoded = vim.fn.getcwd():gsub('[/.]', '-')
-  return vim.fs.joinpath(vim.fn.expand '~/.claude/projects', encoded)
-end
-
--- Derive a display label from one session file via the shared cascade (aiTitle
--- → /command — args → last prompt → first assistant sentence). Sourcing the
--- function then calling it keeps the dashboard and this picker in lockstep.
-local label_fn = require 'plugins.snacks.claude_label'
-local label_cmd = label_fn .. '\nclaude_label "$1"'
+local claude_sessions = require 'plugins.snacks.claude_sessions'
 
 -- Render the recent exchange from one session file ($1) for the preview pane:
 -- plain-text user/assistant messages, tool noise stripped, newest at the bottom.
@@ -26,37 +18,23 @@ jq -r 'select(.type == "user" or .type == "assistant")
   | "── \(.type) ──\n\($t)\n"' "$1" 2>/dev/null | tail -120
 ]]
 
--- List this project's sessions newest-first as picker items. Labels come from
--- a single blocking pass over the files; grep+jq keep it cheap enough for the
--- picker-open path.
+-- This project's sessions, newest-first, as picker items. One resolver call
+-- replaces the old loop that spawned a bash+jq pipeline per transcript, so
+-- open cost no longer scales with the number of sessions. It also fixes the
+-- folder this reads from: the encoding lived here as gsub('[/.]', '-'), which
+-- missed characters like '_' and silently pointed at a directory that does not
+-- exist — the resolver owns that mapping now.
 local function find_sessions()
-  local dir = claude_project_dir()
-  local files = {}
-  for name, kind in vim.fs.dir(dir) do
-    if kind == 'file' and name:match '%.jsonl$' then
-      local path = vim.fs.joinpath(dir, name)
-      local stat = vim.uv.fs_stat(path)
-      if stat then
-        files[#files + 1] = { path = path, id = name:gsub('%.jsonl$', ''), mtime = stat.mtime.sec }
-      end
-    end
-  end
-  table.sort(files, function(a, b)
-    return a.mtime > b.mtime
-  end)
   local items = {}
-  for idx, f in ipairs(files) do
-    local title = vim.trim(vim.fn.system { 'bash', '-c', label_cmd, 'claude_label', f.path })
-    if title == '' then
-      title = 'Untitled (' .. f.id:sub(1, 8) .. ')'
-    end
+  for idx, session in ipairs(claude_sessions.list(vim.fn.getcwd())) do
+    local title = session.title ~= '' and session.title or ('Untitled (' .. session.id:sub(1, 8) .. ')')
     items[#items + 1] = {
       idx = idx,
       text = title,
       title = title,
-      id = f.id,
-      file = f.path,
-      mtime = f.mtime,
+      id = session.id,
+      file = session.path,
+      mtime = session.mtime,
       score = 0,
     }
   end
