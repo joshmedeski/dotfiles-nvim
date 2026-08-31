@@ -598,6 +598,16 @@ return {
     get_recent_conversations,
     { icon = '⏳', title = 'Recent Files', section = 'recent_files', cwd = true, indent = 2, padding = 1 },
     { icon = '🤖', key = 'c', desc = 'Claude Code', action = ':ClaudeCode' },
+    -- Same picker as <leader>ah. The Recent Conversations section above lists
+    -- only the newest few; this searches every session in the project.
+    {
+      icon = '💬',
+      key = 'C',
+      desc = 'Search Claude Conversations',
+      action = function()
+        require 'plugins.snacks.claude_conversations'()
+      end,
+    },
     { icon = '🥧', key = 'a', desc = 'AI (pi)', action = ':silent !tmux split-window -h pi' },
     { icon = '📑', key = 'f', desc = 'Files', action = ':GoToFile' },
     { icon = '🔎', key = '/', desc = 'Find Text', action = ':Grep' },
