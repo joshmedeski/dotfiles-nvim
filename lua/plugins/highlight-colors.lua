@@ -4,6 +4,8 @@ return {
   opts = {
     enable_tailwind = true,
     enable_var_usage = true,
+    -- issue/PR numbers on the dashboard get mistaken for colors
+    exclude_filetypes = { 'snacks_dashboard' },
   },
   config = function(_, opts)
     require('nvim-highlight-colors').setup(opts)
