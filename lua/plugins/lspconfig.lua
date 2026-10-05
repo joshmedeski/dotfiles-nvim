@@ -386,6 +386,24 @@ return {
           filetypes = { 'python' },
         },
 
+        basedpyright = {
+          filetypes = { 'python' },
+          settings = {
+            basedpyright = {
+              analysis = {
+                typeCheckingMode = 'standard',
+                diagnosticMode = 'openFilesOnly',
+                autoSearchPaths = true,
+                useLibraryCodeForTypes = true,
+              },
+            },
+          },
+        },
+
+        ruff = {
+          filetypes = { 'python' },
+        },
+
         lemminx = {
           filetypes = { 'xml', 'xsd', 'xsl', 'xslt', 'svg', 'plist' },
         },
