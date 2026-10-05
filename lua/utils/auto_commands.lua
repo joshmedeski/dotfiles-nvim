@@ -59,6 +59,11 @@ vim.api.nvim_create_autocmd('BufWritePost', {
   command = "execute 'silent !aerospace reload-config'",
 })
 
+vim.api.nvim_create_autocmd('BufWritePost', {
+  pattern = { '*/rift/config.toml', '.rift.toml' },
+  command = "execute 'silent !rift-cli execute config reload'",
+})
+
 vim.api.nvim_create_autocmd({ 'BufNewFile', 'BufFilePre', 'BufRead' }, {
   pattern = { '*.mdx', '*.md' },
   callback = function()
