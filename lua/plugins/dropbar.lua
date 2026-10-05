@@ -312,6 +312,49 @@ return {
       end,
     }
 
+    local octo_icons = {
+      pull = ' ',
+      issue = ' ',
+      release = ' ',
+      discussion = ' ',
+      repo = ' ',
+    }
+
+    ---@class dropbar_source_t
+    local octo = {
+      get_symbols = function(buff, win, cursor)
+        local buffer = _G.octo_buffers and _G.octo_buffers[buff]
+        local node = buffer and buffer.node
+        if not node or not octo_icons[buffer.kind] then
+          return smart_path.get_symbols(buff, win, cursor)
+        end
+
+        local title, ref
+        if buffer.kind == 'release' then
+          title, ref = node.name ~= '' and node.name or node.tagName, node.tagName
+        elseif buffer.kind == 'repo' then
+          title = buffer.repo
+        else
+          title, ref = node.title, '#' .. buffer.number
+        end
+
+        local symbols = {
+          bar.dropbar_symbol_t:new {
+            icon = octo_icons[buffer.kind],
+            icon_hl = 'FileName',
+            name = title,
+            name_hl = 'FileName',
+          },
+        }
+        if ref then
+          table.insert(symbols, bar.dropbar_symbol_t:new { name = ref .. ' ' .. buffer.repo, name_hl = 'FilePath' })
+        end
+        return symbols
+      end,
+    }
+
+    local default_enable = require('dropbar.configs').opts.bar.enable
+
     ---@class dropbar_source_t
     require('dropbar').setup {
       icons = {
@@ -324,7 +367,16 @@ return {
         },
       },
       bar = {
-        sources = function()
+        enable = function(buf, win, info)
+          if vim.bo[buf].filetype == 'octo' then
+            return vim.fn.win_gettype(win) == '' and vim.wo[win].winbar == ''
+          end
+          return default_enable(buf, win, info)
+        end,
+        sources = function(buf)
+          if vim.bo[buf].filetype == 'octo' then
+            return { octo }
+          end
           return { smart_path, mini_diff_stats, lsp_diagnostics }
         end,
       },
