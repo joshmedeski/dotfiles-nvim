@@ -95,7 +95,12 @@ vim.keymap.set('n', 'z9', '<CMD>setlocal foldlevel=99<CR>', { desc = 'Fold level
 
 vim.keymap.set('n', '<leader>L', function()
   vim.wo.number = not vim.wo.number
+  vim.wo.wrap = not vim.wo.number
 end, { desc = 'Toggle line numbers' })
+
+vim.keymap.set('n', '<leader>W', function()
+  vim.wo.wrap = not vim.wo.wrap
+end, { desc = 'Toggle line wrap' })
 
 -- folds
 vim.keymap.set('n', '<leader>z', '<cmd>normal! zMzv<cr>', { desc = 'Fold all others' })
