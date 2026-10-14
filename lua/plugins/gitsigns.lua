@@ -3,6 +3,12 @@ return {
     'lewis6991/gitsigns.nvim',
     enabled = true,
     event = { 'BufReadPost', 'BufNewFile' },
+    cmd = 'Gitsigns',
+    init = function()
+      vim.api.nvim_create_user_command('GitDiffUnified', function(args)
+        vim.cmd.Gitsigns { 'diff', '--diff=unified', unpack(args.fargs) }
+      end, { nargs = '*', desc = 'Gitsigns unified diff panel' })
+    end,
     opts = {
       signs = {
         add = { text = '' },
