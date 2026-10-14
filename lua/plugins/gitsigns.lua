@@ -116,7 +116,7 @@ return {
         return require('gitsigns').statuscolumn()
       end
 
-      vim.o.statuscolumn = '%s%{%v:lua.gitsigns_statuscolumn()%}'
+      vim.o.statuscolumn = '%s%l%{%v:lua.gitsigns_statuscolumn()%}'
     end,
   },
 }
