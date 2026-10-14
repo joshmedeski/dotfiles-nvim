@@ -11,7 +11,7 @@ return {
     'MahanRahmati/blink-nerdfont.nvim',
     'moyiz/blink-emoji.nvim',
     {
-      'echasnovski/mini.snippets',
+      'nvim-mini/mini.snippets',
       dependencies = { 'rafamadriz/friendly-snippets' },
       config = function()
         local snippets = require 'mini.snippets'

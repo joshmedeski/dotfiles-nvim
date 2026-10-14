@@ -2,7 +2,7 @@ return { -- Collection of various small independent plugins/modules
 
   -- TODO: combine with my config
   -- { -- Collection of various small independent plugins/modules
-  --   'echasnovski/mini.nvim',
+  --   'nvim-mini/mini.nvim',
   --   config = function()
   --     -- Better Around/Inside textobjects
   --     --
@@ -38,7 +38,7 @@ return { -- Collection of various small independent plugins/modules
   --     --  Check out: https://github.com/echasnovski/mini.nvim
   --   end,
   -- },
-  'echasnovski/mini.nvim',
+  'nvim-mini/mini.nvim',
   dependencies = { 'JoosepAlviste/nvim-ts-context-commentstring' },
   event = 'VeryLazy',
   config = function()
