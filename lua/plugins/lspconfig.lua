@@ -125,9 +125,6 @@ return {
           --  Most Language Servers support renaming across files, etc.
           map('<leader>rn', vim.lsp.buf.rename, '[R]e[n]ame')
 
-          -- Incremental rename
-          -- map('<leader>rN', require('inc_rename').rename(vim.fn.expand '<cword>'), 'Incremental LSP renaming', { 'n' })
-
           -- This function resolves a difference between neovim nightly (version 0.11) and stable (version 0.10)
           ---@param client vim.lsp.Client
           ---@param method vim.lsp.protocol.Method

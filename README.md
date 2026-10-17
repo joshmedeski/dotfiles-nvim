@@ -56,7 +56,6 @@ Over 40 specialized plugins organized by category:
 - `treesitter.lua` - Syntax highlighting and parsing
 - `blink.lua` - Completion engine
 - `trouble.lua` - Diagnostics and quickfix
-- `refactoring.lua` - Code refactoring tools
 
 **Git Integration**
 - `neogit.lua` - Git interface
@@ -83,7 +82,6 @@ Over 40 specialized plugins organized by category:
 - `dap.lua` - Debug adapter protocol
 - `neotest.lua` - Testing framework
 - `coverage.lua` - Code coverage
-- `package-info.lua` - Package management
 - `glsl.lua` - GLSL syntax
 - `openscad.lua` - OpenSCAD support
 - `caddyfile.lua` - Caddyfile syntax
@@ -91,8 +89,6 @@ Over 40 specialized plugins organized by category:
 **Editor Enhancements**
 - `mini.lua` - Mini.nvim modules
 - `boole.lua` - Boolean toggling
-- `inc-rename.lua` - Incremental renaming
-- `indent-o-matic.lua` - Automatic indentation
 - `highlight-colors.lua` - Color highlighting
 - `grug-far.lua` - Find and replace
 - `key-analyzer.lua` - Key binding analysis

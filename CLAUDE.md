@@ -54,7 +54,7 @@ Keybindings are defined per-plugin via `keys` tables (for which-key integration)
 - **Treesitter**: `plugins/treesitter.lua` - Auto-install parsers
 - **Fuzzy finding**: `plugins/snacks.lua` and `plugins/telescope.lua`
 - **Git**: neogit, gitsigns, diffview, gitlinker, octo
-- **AI**: codecompanion (multi-model), copilot, MCP hub integration
+- **AI**: claudecode, pi
 - **Debug**: `plugins/dap.lua` - DAP with Go support via delve
 - **Testing**: `plugins/neotest.lua` - Go, Playwright, Vitest runners
 

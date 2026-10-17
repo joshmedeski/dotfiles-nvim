@@ -12,10 +12,6 @@
 
 vim.api.nvim_set_keymap('n', '<leader><space>', '<cmd>lua vim.lsp.buf.code_action()<CR>', { noremap = true, silent = true })
 
-vim.keymap.set('n', '<leader>rN', function()
-  return ':IncRename ' .. vim.fn.expand '<cword>'
-end, { expr = true })
-
 -- Exit insert mode with jk
 vim.keymap.set('i', 'jk', '<Esc>', { desc = 'Exit insert mode' })
 
